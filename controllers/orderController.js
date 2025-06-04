@@ -169,7 +169,7 @@ const getOrdersByArea = async (req, res) => {
     const skip = (pageNum - 1) * limitNum;
 
     const orders = await Order.find(query)
-      .populate("shopId", "name address")
+      .populate("shopId", "name address contactNumber addressLink")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNum);
