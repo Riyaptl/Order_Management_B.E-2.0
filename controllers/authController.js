@@ -262,9 +262,9 @@ const logoutAuth = async (req, res) => {
       
         await attendance.save();
 
-        // user.active = false
+        user.active = false
 
-        // await user.save()
+        await user.save()
         // console.log(user);
 
         res.status(200).json({
