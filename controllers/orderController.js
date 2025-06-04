@@ -211,15 +211,19 @@ const softDeleteOrder = async (req, res) => {
 // get orders for sales report
 const getSalesReport = async (req, res) => {
   try {
-    const { username, completeData = false } = req.body;
-
+    const { dist_username, completeData = false, placed_username } = req.body;
+    
     // Build query
     const query = { deleted: false, products: { $ne: {} } };
 
     // Get area ids, if distributor
-    if (username){
-      const areaIds = await Area.find({distributor: username}, "id") 
+    if (dist_username){
+      const areaIds = await Area.find({distributor: dist_username}, "id") 
       query["areaId"] = {$in: areaIds}
+    }
+    
+    if (placed_username){
+      query["placedBy"] = placed_username
     }
 
     if (!completeData) {

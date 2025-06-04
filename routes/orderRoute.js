@@ -27,7 +27,7 @@ router.post("/all/orders", authenticateUser, authorizeRoles("admin", "distributo
 router.post("/remove/:id", authenticateUser, authorizeRoles("admin"), softDeleteOrder);
 
 // Get sales report (Admin, Dist access)
-router.post("/sales/report", authenticateUser, authorizeRoles("admin", "distributor"), getSalesReport);
+router.post("/sales/report", authenticateUser, getSalesReport);
 
 // 4. CSV Export
 router.post("/csv/export", authenticateUser, authorizeRoles("admin", "distributor"), csvExportOrder);
