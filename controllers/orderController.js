@@ -208,6 +208,91 @@ const softDeleteOrder = async (req, res) => {
   }
 };
 
+// get orders for sales report
+const getSalesReport = async (req, res) => {
+  try {
+    const { username, completeData = false } = req.body;
+
+    // Build query
+    const query = { deleted: false, products: { $ne: {} } };
+
+    // Get area ids, if distributor
+    if (username){
+      const areaIds = await Area.find({distributor: username}, "id") 
+      query["areaId"] = {$in: areaIds}
+    }
+
+    if (!completeData) {
+     
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+
+      const endOfToday = new Date();
+      endOfToday.setHours(23, 59, 59, 999);
+
+      query.createdAt = { $gte: startOfToday, $lte: endOfToday };
+    } else {
+      const now = new Date();
+
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      endOfMonth.setHours(23, 59, 59, 999);
+
+      query.createdAt = { $gte: startOfMonth, $lte: endOfMonth };
+    }
+     
+    const orders = await Order.find(query, {products: 1, total: 1})
+    
+    const keysToReport = ["Cranberry 50g", "Dryfruits 50g", "Peanuts 50g", "Mix seeds 50g",
+    "Classic Coffee 50g", "Dark Coffee 50g", "Intense Coffee 50g", "Toxic Coffee 50g",
+    "Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g",
+    "Orange 25g", "Mint 25g", "Classic Coffee 25g", "Dark Coffee 25g",
+    "Intense Coffee 25g", "Toxic Coffee 25g"]
+    
+    const totalList = [
+      "Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g"
+    ];
+
+    const amountTotal = [40, 50, 27, 30]
+    const productTotals = {};
+    const overallTotals = {};
+
+    keysToReport.forEach(key => {
+      productTotals[key] = 0;
+    });
+    totalList.forEach(key => {
+      overallTotals[key] = 0;
+    });
+
+    for (const order of orders) {
+      const orderProducts = order.products || {};
+      const orderTotal = order.total || {};
+      keysToReport.forEach(key => {
+        if (orderProducts.get(key)) {
+          productTotals[key] += orderProducts.get(key);
+        }
+      });
+      totalList.forEach(key => {
+        if (orderTotal.get(key)) {
+          overallTotals[key] += orderTotal.get(key);
+        }
+      });
+    }
+
+    let amount = 0
+    Object.keys(overallTotals).forEach((key, index) => {
+      amount += amountTotal[index] * overallTotals[key]
+    })
+
+    res.status(200).json({productTotals, overallTotals, amount});
+  } catch (error) {
+    res.status(500).json(error.message);
+  }
+};
+
+
 // 4. CSV Export
 const csvExportOrder = async (req, res) => {
   try {
@@ -301,5 +386,6 @@ module.exports = {
   getOrdersByArea,
   softDeleteOrder,
   csvExportOrder,
-  dailyReport
+  dailyReport,
+  getSalesReport
 };
