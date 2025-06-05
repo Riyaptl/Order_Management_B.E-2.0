@@ -162,7 +162,7 @@ const getOrdersByArea = async (req, res) => {
     } else {
       query["products"] = {}; 
     }
-      
+  
     // Pagination params
     const pageNum = parseInt(page, 10) || 1;
     const limitNum = parseInt(limit, 10) || 50;
@@ -173,7 +173,7 @@ const getOrdersByArea = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNum);
-
+    
     // Optional: total count for frontend pagination controls
     const totalOrders = await Order.countDocuments(query);
 
@@ -379,8 +379,6 @@ const csvExportOrder = async (req, res) => {
     return res.send(csv);
 
   } catch (error) {
-    console.log(error);
-    
     res.status(500).json(error.message);
   }
 };

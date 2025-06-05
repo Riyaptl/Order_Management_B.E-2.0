@@ -21,13 +21,13 @@ const app = express()
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }));
 
-app.use((req, res, next) => {
-  if (req.method === 'OPTIONS') {
-    console.log('OPTIONS headers:', req.headers);
-  }
-  console.log(`Debugging: [${req.method}] ${req.url} Origin: ${req.headers.origin}`);
-  next();
-});
+// app.use((req, res, next) => {
+//   if (req.method === 'OPTIONS') {
+//     console.log('OPTIONS headers:', req.headers);
+//   }
+//   console.log(`Debugging: [${req.method}] ${req.url} Origin: ${req.headers.origin}`);
+//   next();
+// });
 
 const allowedOrigins = [
   "https://order-management-f-e-2-0-odrngyagc.vercel.app",
@@ -37,7 +37,7 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function(origin, callback) {
-    console.log("In cors option Origin:", origin);
+    // console.log("In cors option Origin:", origin);
     if (!origin) return callback(null, true); 
     if (allowedOrigins.includes(origin)) {
       callback(null, origin);  

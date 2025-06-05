@@ -32,8 +32,7 @@ const updateAreaName = async (req, res) => {
     if (distributor){
       dist_trimmed = distributor.trim()
     }
-    console.log(name, areas, dist_trimmed);
-    
+   
     // Check if area with the same name already exists (excluding the current area)
     const existingArea = await Area.findOne({ name: name.trim(), _id: { $ne: id }, deleted: { $in: [false, null] } });
     if (existingArea) {
