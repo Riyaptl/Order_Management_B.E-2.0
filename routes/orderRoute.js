@@ -10,7 +10,8 @@ const {
   softDeleteOrder,
   csvExportOrder,
   dailyReport,
-  getSalesReport
+  getSalesReport,
+  getOrdersBySR
 } = require("../controllers/orderController");
 
 
@@ -21,7 +22,10 @@ router.post("/report", authenticateUser, authorizeRoles("admin", "sr"), dailyRep
 router.post("/", authenticateUser, authorizeRoles("admin", "sr"), createOrder);
 
 // 2. Read Orders by Area (Admin, Dist access)
-router.post("/all/orders", authenticateUser, authorizeRoles("admin", "distributor"), getOrdersByArea);
+router.post("/all/area", authenticateUser, authorizeRoles("admin", "distributor"), getOrdersByArea);
+
+// 2. Read Orders by SR (Admin, Dist access)
+router.post("/all/sr", authenticateUser, authorizeRoles("admin", "sr"), getOrdersBySR);
 
 // 3. Soft Delete Order (Admin access)
 router.post("/remove/:id", authenticateUser, authorizeRoles("admin"), softDeleteOrder);

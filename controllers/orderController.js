@@ -74,11 +74,12 @@ const dailyReport = async (req, res) => {
 const createOrder = async (req, res) => {
   try {
     const { shopId, areaId, products, placedBy, location, paymentTerms, remarks } = req.body;
+
     const createdBy = req.user.username;
     const finalPlacedBy = placedBy || createdBy
 
-    const areaExists = await Area.findById(areaId);
-    const shopExists = await Shop.findById(shopId);
+    const areaExists = await Area.findOne({_id:areaId, deleted: {$in: [false, null]}});
+    const shopExists = await Shop.findOne({_id: shopId, deleted: {$in: [false, null]}});
     if (!areaExists || !shopExists) return res.status(400).json("Invalid area or shop ID");
 
     let data = { shopId, areaId, placedBy: finalPlacedBy, products, createdBy, location, paymentTerms, remarks }
@@ -114,7 +115,7 @@ const createOrder = async (req, res) => {
     } else {
       if (!location) return res.status(400).json("Location not found");
     }
-
+    
     const order = new Order(data);
     
     await order.save();
@@ -163,6 +164,66 @@ const getOrdersByArea = async (req, res) => {
       query["products"] = {}; 
     }
   
+    // Pagination params
+    const pageNum = parseInt(page, 10) || 1;
+    const limitNum = parseInt(limit, 10) || 50;
+    const skip = (pageNum - 1) * limitNum;
+
+    const orders = await Order.find(query)
+      .populate("shopId", "name address contactNumber addressLink")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum);
+    
+    // Optional: total count for frontend pagination controls
+    const totalOrders = await Order.countDocuments(query);
+
+    res.status(200).json({
+      orders,
+      currentPage: pageNum,
+      totalPages: Math.ceil(totalOrders / limit),
+      totalCount: totalOrders
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 2. get orders- placed by
+const getOrdersBySR = async (req, res) => {
+  try {
+    const { username, completeData = false, page = 1, limit = 20, placedOrders } = req.body;
+
+    // Build query
+    const query = { placedBy: username, deleted: false };
+
+    if (!completeData) {
+     
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+
+      const endOfToday = new Date();
+      endOfToday.setHours(23, 59, 59, 999);
+
+      query.createdAt = { $gte: startOfToday, $lte: endOfToday };
+    } else {
+      const now = new Date();
+
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      endOfMonth.setHours(23, 59, 59, 999);
+
+      query.createdAt = { $gte: startOfMonth, $lte: endOfMonth };
+    }
+
+    if (placedOrders) {
+      query["products"] = { $ne: {} }; 
+    } else {
+      query["products"] = {}; 
+    }
+    
     // Pagination params
     const pageNum = parseInt(page, 10) || 1;
     const limitNum = parseInt(limit, 10) || 50;
@@ -248,6 +309,7 @@ const getSalesReport = async (req, res) => {
     }
      
     const orders = await Order.find(query, {products: 1, total: 1})
+
     
     const keysToReport = ["Cranberry 50g", "Dryfruits 50g", "Peanuts 50g", "Mix seeds 50g",
     "Classic Coffee 50g", "Dark Coffee 50g", "Intense Coffee 50g", "Toxic Coffee 50g",
@@ -389,5 +451,6 @@ module.exports = {
   softDeleteOrder,
   csvExportOrder,
   dailyReport,
-  getSalesReport
+  getSalesReport,
+  getOrdersBySR
 };
