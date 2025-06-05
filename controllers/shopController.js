@@ -12,10 +12,11 @@ const createShop = async (req, res) => {
   try {
     const { name, address, contactNumber, addressLink, areaId } = req.body;
     const shop = new Shop({ name, address, contactNumber, addressLink, createdBy: req.user.username });
+    
+    const area = await Area.findOneAndUpdate({_id: areaId, deleted: { $in: [false, null] }}, { $push: { shops: shop._id } }, {new: true});
+    if (!area) return res.status(404).json("Area not found");
+    
     await shop.save();
-
-    await Area.findByIdAndUpdate(areaId, { $push: { shops: shop._id } });
-
     res.status(201).json("Shop created successfully");
   } catch (error) {
     res.status(500).json(error.message);
@@ -36,7 +37,7 @@ const updateShop = async (req, res) => {
     });
     updates["updatedBy"] = req.user.username
     
-    const updatedShop = await Shop.findByIdAndUpdate(id, updates, { new: true });
+    const updatedShop = await Shop.findOneAndUpdate({_id: id, deleted: { $in: [false, null] }}, updates, { new: true });
     if (!updatedShop) return res.status(404).json("Shop not found");
 
     res.status(200).json(updatedShop);
@@ -49,11 +50,19 @@ const updateShop = async (req, res) => {
 const deleteShop = async (req, res) => {
   try {
     const { id, areaId } = req.body;
-    const deletedShop = await Shop.findByIdAndDelete(id);
+    const deletedShop = await Shop.findOne({_id: id, deleted: { $in: [false, null] }});
     if (!deletedShop) return res.status(404).json("Shop not found");
 
-    await Area.findByIdAndUpdate(areaId, { $pull: { shops: id } });
+    const area = await Area.findOneAndUpdate({_id: areaId, deleted: { $in: [false, null] }}, { $pull: { shops: id } }, {new: true});
+    if (!area) return res.status(404).json("Area not found");
 
+    deletedShop.area = area.id
+    deletedShop.deleted = true 
+    deletedShop.deletedBy = req.user.username
+    deletedShop.deletedAt = Date.now()
+    await deletedShop.save()
+    console.log(deletedShop);
+    
     res.status(200).json({"message": "Shop deleted and removed from respective route"});
   } catch (error) {
     res.status(500).json(error.message);
@@ -64,7 +73,7 @@ const deleteShop = async (req, res) => {
 const getShopsByArea = async (req, res) => {
   try {
     const { areaId } = req.body;
-    const areaShops = await Area.findById(areaId).populate({
+    const areaShops = await Area.findOne({_id: areaId, deleted: { $in: [false, null] }}).populate({
       path: "shops",
       select: "name address addressLink contactNumber createdBy updatedBy", 
     });
@@ -86,7 +95,7 @@ const getShopDetailes = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const shop = await Shop.findById(id);
+    const shop = await Shop.findOne({_id: id, deleted: { $in: [false, null] }});
 
     if (!shop) return res.status(404).json("Shop not found");
 
@@ -101,10 +110,10 @@ const shiftArea = async (req, res) => {
   try {
     const { prevAreaId, newAreaId, id } = req.body;
     
-    const prevArea = await Area.findByIdAndUpdate(prevAreaId, { $pull: { shops: id } });
+    const prevArea = await Area.findOneAndUpdate({_id: prevAreaId, deleted: { $in: [false, null] }}, { $pull: { shops: id } });
     if (!prevArea) return res.status(404).json("Area not found");
     
-    const newArea = await Area.findByIdAndUpdate(newAreaId, { $push: { shops: id } });
+    const newArea = await Area.findOneAndUpdate({_id: newAreaId, deleted: { $in: [false, null] }}, { $push: { shops: id } });
     if (!newArea) return res.status(404).json("Area not found");
     
     const areaId = new ObjectId(newAreaId);
@@ -126,7 +135,7 @@ const csvExportShop = async (req, res) => {
       return res.status(400).json({ message: "Area parameter is required" });
     }
 
-    const area = await Area.findById(areaId)
+    const area = await Area.findOne({_id: areaId, deleted: { $in: [false, null] } })
       .populate({
       path: "shops",
       select: "name address addressLink contactNumber createdBy updatedBy", 
@@ -168,7 +177,7 @@ const csvImportShop = async (req, res) => {
   const shopsToInsert = [];
 
   try {
-    const area = await Area.findById(areaId);
+    const area = await Area.findOne({_id: areaId, deleted: { $in: [false, null] } });
     if (!area) {
       return res.status(404).json({ "message": 'Area not found' });
     }

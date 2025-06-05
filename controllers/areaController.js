@@ -11,7 +11,7 @@ const createArea = async (req, res) => {
       dist_trimmed = distributor.trim()
     }
     // Check if area with the same name already exists
-    const existingArea = await Area.findOne({ name: name.trim() });
+    const existingArea = await Area.findOne({ name: name.trim(), deleted: { $in: [false, null] } });
     if (existingArea) {
       return res.status(400).json("Area with this name already exists");
     }   
@@ -35,7 +35,7 @@ const updateAreaName = async (req, res) => {
     console.log(name, areas, dist_trimmed);
     
     // Check if area with the same name already exists (excluding the current area)
-    const existingArea = await Area.findOne({ name: name.trim(), _id: { $ne: id } });
+    const existingArea = await Area.findOne({ name: name.trim(), _id: { $ne: id }, deleted: { $in: [false, null] } });
     if (existingArea) {
       return res.status(400).json("Area with this name already exists");
     }
@@ -54,14 +54,14 @@ const updateAreaName = async (req, res) => {
 const deleteArea = async (req, res) => {
   try {
     const { id } = req.params;
-    const area = await Area.findById(id);
+    const area = await Area.findOne({_id: id, deleted: { $in: [false, null] }});
     if (!area) return res.status(404).json( "Area not found");
 
     if (area.shops.length > 0) {
       return res.status(400).json("Cannot delete area with shops");
     }
 
-    await Area.findByIdAndDelete(id);
+    await Area.findByIdAndUpdate(id, {deleted: true, deletedBy: req.user.username, deletedAt: Date.now()});
     res.status(200).json( {"message": "Route deleted"} );
   } catch (error) {
     res.status(500).json(error.message);
@@ -72,7 +72,7 @@ const deleteArea = async (req, res) => {
 const getAllAreas = async (req, res) => {
   try {
     const {dist_username} = req.body
-    query = {}
+    query = {deleted: { $in: [false, null] } }
     if (dist_username){
       query["distributor"] = dist_username
     }
@@ -90,8 +90,8 @@ const getAreas = async (req, res) => {
     const limit = 20;
     const skip = (page - 1) * limit;
 
-    const totalCount = await Area.countDocuments();
-    const areas = await Area.find().sort({ createdAt: -1 }).skip(skip).limit(limit);
+    const totalCount = await Area.countDocuments({deleted: { $in: [false, null] }});
+    const areas = await Area.find({deleted: { $in: [false, null] }}).sort({ createdAt: -1 }).skip(skip).limit(limit);
     
     res.status(200).json({
       areas,
@@ -109,7 +109,7 @@ const getAreas = async (req, res) => {
 const csvExportArea = async (req, res) => {
   try {
 
-    const areas = await Area.find().sort({ createdAt: -1 })
+    const areas = await Area.find({deleted: { $in: [false, null] }}).sort({ createdAt: -1 })
 
     const formattedAreas = areas.map(area => {
       const row = {

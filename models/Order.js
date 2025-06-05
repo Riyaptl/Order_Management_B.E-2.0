@@ -53,6 +53,13 @@ const orderSchema = new mongoose.Schema({
         longitude: Number
     }
   },
+  paymentTerms: {
+    type: String,
+    enum: ["cash", "company credit", "sr credit", "distributor credit"]
+  },
+  remarks: {
+    type: String
+  },
   deleted: {
     type: Boolean,
     default: false

@@ -23,6 +23,16 @@ const AreaSchema = new mongoose.Schema({
   updatedBy: {
     type: String,
   },
+  deleted: {
+    type: Boolean,
+    default: false
+  },
+  deletedBy: {
+    type: String,
+  },
+  deletedAt: {
+    type: Date,
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model("Area", AreaSchema);

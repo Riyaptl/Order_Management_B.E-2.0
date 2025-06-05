@@ -23,17 +23,17 @@ const upload = multer({ dest: uploadDir });
 
 
 // Admin-only access for create, update, delete
-router.post("/", authenticateUser, checkRole("admin"), createShop);
-router.post("/:id", authenticateUser, checkRole("admin"), updateShop);
-router.delete("/", authenticateUser, checkRole("admin"), deleteShop);
-router.post("/shift/area", authenticateUser, checkRole("admin"), shiftArea);
+router.post("/", authenticateUser, checkRole("admin", "sr"), createShop);
+router.post("/:id", authenticateUser, checkRole("admin", "sr"), updateShop);
+router.delete("/", authenticateUser, checkRole("admin", "sr"), deleteShop);
+router.post("/shift/area", authenticateUser, checkRole("admin", "sr"), shiftArea);
 
 // Public or protected read
 router.post("/route/all", authenticateUser, checkRole("admin", "sr"), getShopsByArea);
 router.get("/details/:id", authenticateUser, checkRole("admin", "sr"), getShopDetailes);
 
 // 4. CSV Export
-router.post("/csv/export", authenticateUser, checkRole("admin"), csvExportShop);
+router.post("/csv/export", authenticateUser, checkRole("admin", "sr"), csvExportShop);
 
 // 4. CSV Import
 router.use(authenticateUser, checkRole("admin"))
