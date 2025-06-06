@@ -75,13 +75,14 @@ const getShopsByArea = async (req, res) => {
     const { areaId } = req.body;
     const areaShops = await Area.findOne({_id: areaId, deleted: { $in: [false, null] }}).populate({
       path: "shops",
-      select: "name address addressLink contactNumber createdBy updatedBy", 
+      select: "name address addressLink contactNumber createdBy updatedBy deleted", 
     });
-
     if (!areaShops) return res.status(404).json("Area not found");
 
+    const activeShops = areaShops?.shops?.filter((shop) => shop.deleted !== true);
+
     res.status(200).json({
-      shops: areaShops.shops,
+      shops: activeShops,
     });
 
    
@@ -116,7 +117,7 @@ const getShopOrders = async (req, res) => {
     if (shop?.orders?.length > 0) {
       shop.orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
-    
+
     res.status(200).json(shop.orders);
   } catch (error) {
     res.status(500).json(error.message);
@@ -127,16 +128,18 @@ const getShopOrders = async (req, res) => {
 const shiftArea = async (req, res) => {
   try {
     const { prevAreaId, newAreaId, id } = req.body;
+    const shopObjId  = new ObjectId(id);
     
-    const prevArea = await Area.findOneAndUpdate({_id: prevAreaId, deleted: { $in: [false, null] }}, { $pull: { shops: id } });
+    const prevArea = await Area.findOneAndUpdate({_id: prevAreaId, deleted: { $in: [false, null] }}, { $pull: { shops: shopObjId } }, {new: true});
     if (!prevArea) return res.status(404).json("Area not found");
     
-    const newArea = await Area.findOneAndUpdate({_id: newAreaId, deleted: { $in: [false, null] }}, { $push: { shops: id } });
+    const newArea = await Area.findOneAndUpdate({_id: newAreaId, deleted: { $in: [false, null] }}, { $push: { shops: shopObjId } }, {new: true});
     if (!newArea) return res.status(404).json("Area not found");
     
     const areaId = new ObjectId(newAreaId);
     await Order.updateMany({shopId: id}, { $set: { areaId } });
-    res.status(200).json({"message": "Shop has been moved successfully"});
+    
+    res.status(200).json({"message": "Shop shifted successfully"});
 
   } catch (error) {
     res.status(500).json(error.message);

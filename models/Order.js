@@ -56,7 +56,7 @@ const orderSchema = new mongoose.Schema({
   },
   paymentTerms: {
     type: String,
-    enum: ["cash", "company credit", "sr credit", "distributor credit"]
+    enum: ["cash", "company credit", "sr credit", "distributor credit", ""]
   },
   remarks: {
     type: String
