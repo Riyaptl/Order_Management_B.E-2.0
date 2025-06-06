@@ -7,6 +7,7 @@ const {
   deleteShop,
   getShopsByArea,
   getShopDetailes,
+  getShopOrders,
   csvExportShop,
   shiftArea,
   csvImportShop
@@ -31,6 +32,7 @@ router.post("/shift/area", authenticateUser, checkRole("admin", "sr"), shiftArea
 // Public or protected read
 router.post("/route/all", authenticateUser, checkRole("admin", "sr"), getShopsByArea);
 router.get("/details/:id", authenticateUser, checkRole("admin", "sr"), getShopDetailes);
+router.get("/orders/:id", authenticateUser, checkRole("admin", "sr"), getShopOrders);
 
 // 4. CSV Export
 router.post("/csv/export", authenticateUser, checkRole("admin", "sr"), csvExportShop);

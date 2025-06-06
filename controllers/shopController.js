@@ -105,6 +105,24 @@ const getShopDetailes = async (req, res) => {
   }
 };
 
+//  Get shop orders
+const getShopOrders = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const shop = await Shop.findOne({_id: id, deleted: { $in: [false, null] }}, "orders");
+    if (!shop) return res.status(404).json("Shop not found");
+        
+    if (shop?.orders?.length > 0) {
+      shop.orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
+    
+    res.status(200).json(shop.orders);
+  } catch (error) {
+    res.status(500).json(error.message);
+  }
+};
+
 // 6. Change area 
 const shiftArea = async (req, res) => {
   try {
@@ -230,5 +248,6 @@ module.exports = {
   getShopDetailes,
   csvExportShop,
   shiftArea,
-  csvImportShop
+  csvImportShop,
+  getShopOrders
 };

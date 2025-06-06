@@ -79,12 +79,13 @@ const createOrder = async (req, res) => {
     const finalPlacedBy = placedBy || createdBy
 
     const areaExists = await Area.findOne({_id:areaId, deleted: {$in: [false, null]}});
-    const shopExists = await Shop.findOne({_id: shopId, deleted: {$in: [false, null]}});
+    const shopExists = await Shop.findOne({_id: shopId, deleted: {$in: [false, null]}});    
     if (!areaExists || !shopExists) return res.status(400).json("Invalid area or shop ID");
 
     let data = { shopId, areaId, placedBy: finalPlacedBy, products, createdBy, location, paymentTerms, remarks, orderPlacedBy }
 
     // Calculate total if products exist
+    let total = {}
     if (Object.keys(products).length !== 0){
 
       // Mapping of product keys to their respective total category
@@ -96,7 +97,7 @@ const createOrder = async (req, res) => {
       };
       
       // Calculate total object
-      const total = {
+      total = {
         "Regular 50g": 0,
         "Coffee 50g": 0,
         "Regular 25g": 0,
@@ -115,9 +116,22 @@ const createOrder = async (req, res) => {
     } else {
       if (!location) return res.status(400).json("Location not found");
     }
-    
+
     const order = new Order(data);
     
+    if (Object.keys(products).length !== 0) {
+ 
+      let shopData = { placedBy: finalPlacedBy, products, total, paymentTerms, remarks, orderPlacedBy, createdAt: Date.now(), orderId: order._id }
+      if (!shopExists.orders){
+        shopExists.orders = []
+      }
+      shopExists.orders.push(shopData)
+      if (shopExists.orders.length > 3) {
+        shopExists.orders.shift()
+      }
+      await shopExists.save()
+    }
+
     await order.save();
     res.status(201).json({"message": "Order created successfully"});
   } catch (error) {

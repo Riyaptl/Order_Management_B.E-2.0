@@ -12,6 +12,7 @@ const totalList = [
   "Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g"
 ];
 
+
 const orderSchema = new mongoose.Schema({
   shopId: {
     type: mongoose.Schema.Types.ObjectId,
