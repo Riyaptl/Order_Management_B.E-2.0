@@ -60,6 +60,9 @@ const orderSchema = new mongoose.Schema({
   remarks: {
     type: String
   },
+  orderPlacedBy: {
+    type: String
+  },
   deleted: {
     type: Boolean,
     default: false
