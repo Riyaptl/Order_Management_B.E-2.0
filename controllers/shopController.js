@@ -75,7 +75,7 @@ const getShopsByArea = async (req, res) => {
     const { areaId } = req.body;
     const areaShops = await Area.findOne({_id: areaId, deleted: { $in: [false, null] }}).populate({
       path: "shops",
-      select: "name address addressLink contactNumber createdBy updatedBy deleted", 
+      select: "name address addressLink contactNumber createdBy createdAt updatedBy deleted", 
     });
     if (!areaShops) return res.status(404).json("Area not found");
 
