@@ -63,7 +63,7 @@ const dailyReport = async (req, res) => {
       new Date(b.date) - new Date(a.date)
     );
 
-    res.json({totalSummary: reportList});
+    res.json({ totalSummary: reportList });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -78,15 +78,15 @@ const createOrder = async (req, res) => {
     const createdBy = req.user.username;
     const finalPlacedBy = placedBy || createdBy
 
-    const areaExists = await Area.findOne({_id:areaId, deleted: {$in: [false, null]}});
-    const shopExists = await Shop.findOne({_id: shopId, deleted: {$in: [false, null]}});    
+    const areaExists = await Area.findOne({ _id: areaId, deleted: { $in: [false, null] } });
+    const shopExists = await Shop.findOne({ _id: shopId, deleted: { $in: [false, null] } });
     if (!areaExists || !shopExists) return res.status(400).json("Invalid area or shop ID");
 
     let data = { shopId, areaId, placedBy: finalPlacedBy, products, createdBy, location, paymentTerms, remarks, orderPlacedBy }
 
     // Calculate total if products exist
     let total = {}
-    if (Object.keys(products).length !== 0){
+    if (Object.keys(products).length !== 0) {
 
       // Mapping of product keys to their respective total category
       const totalMapping = {
@@ -95,7 +95,7 @@ const createOrder = async (req, res) => {
         "Regular 25g": ["Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g", "Orange 25g", "Mint 25g"],
         "Coffee 25g": ["Classic Coffee 25g", "Dark Coffee 25g", "Intense Coffee 25g", "Toxic Coffee 25g"]
       };
-      
+
       // Calculate total object
       total = {
         "Regular 50g": 0,
@@ -103,7 +103,7 @@ const createOrder = async (req, res) => {
         "Regular 25g": 0,
         "Coffee 25g": 0
       };
-      
+
       // Loop through each category and sum up matching product quantities
       for (const [category, keys] of Object.entries(totalMapping)) {
         keys.forEach((key) => {
@@ -118,11 +118,11 @@ const createOrder = async (req, res) => {
     }
 
     const order = new Order(data);
-    
+
     if (Object.keys(products).length !== 0) {
- 
+
       let shopData = { placedBy: finalPlacedBy, products, total, paymentTerms, remarks, orderPlacedBy, createdAt: Date.now(), orderId: order._id }
-      if (!shopExists.orders){
+      if (!shopExists.orders) {
         shopExists.orders = []
       }
       shopExists.orders.push(shopData)
@@ -133,7 +133,7 @@ const createOrder = async (req, res) => {
     }
 
     await order.save();
-    res.status(201).json({"message": "Order created successfully"});
+    res.status(201).json({ "message": "Order created successfully" });
   } catch (error) {
     res.status(500).json(error.message);
   }
@@ -152,7 +152,7 @@ const getOrdersByArea = async (req, res) => {
     const query = { areaId, deleted: false };
 
     if (!completeData) {
-     
+
       const startOfToday = new Date();
       startOfToday.setHours(0, 0, 0, 0);
 
@@ -173,11 +173,11 @@ const getOrdersByArea = async (req, res) => {
     }
 
     if (placedOrders) {
-      query["products"] = { $ne: {} }; 
+      query["products"] = { $ne: {} };
     } else {
-      query["products"] = {}; 
+      query["products"] = {};
     }
-  
+
     // Pagination params
     const pageNum = parseInt(page, 10) || 1;
     const limitNum = parseInt(limit, 10) || 50;
@@ -188,7 +188,7 @@ const getOrdersByArea = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNum);
-    
+
     // Optional: total count for frontend pagination controls
     const totalOrders = await Order.countDocuments(query);
 
@@ -212,7 +212,7 @@ const getOrdersBySR = async (req, res) => {
     const query = { placedBy: username, deleted: false };
 
     if (!completeData) {
-     
+
       const startOfToday = new Date();
       startOfToday.setHours(0, 0, 0, 0);
 
@@ -233,11 +233,11 @@ const getOrdersBySR = async (req, res) => {
     }
 
     if (placedOrders) {
-      query["products"] = { $ne: {} }; 
+      query["products"] = { $ne: {} };
     } else {
-      query["products"] = {}; 
+      query["products"] = {};
     }
-    
+
     // Pagination params
     const pageNum = parseInt(page, 10) || 1;
     const limitNum = parseInt(limit, 10) || 50;
@@ -248,7 +248,7 @@ const getOrdersBySR = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNum);
-    
+
     // Optional: total count for frontend pagination controls
     const totalOrders = await Order.countDocuments(query);
 
@@ -269,7 +269,7 @@ const softDeleteOrder = async (req, res) => {
   try {
     const { id } = req.params;
     const deletedBy = req.user.username;
-    
+
     const order = await Order.findById(id);
     if (!order || order.deleted) return res.status(404).json("Order not found or already deleted");
 
@@ -287,22 +287,22 @@ const softDeleteOrder = async (req, res) => {
 const getSalesReport = async (req, res) => {
   try {
     const { dist_username, completeData = false, placed_username } = req.body;
-    
+
     // Build query
     const query = { deleted: false, products: { $ne: {} } };
 
     // Get area ids, if distributor
-    if (dist_username){
-      const areaIds = await Area.find({distributor: dist_username}, "id") 
-      query["areaId"] = {$in: areaIds}
+    if (dist_username) {
+      const areaIds = await Area.find({ distributor: dist_username }, "id")
+      query["areaId"] = { $in: areaIds }
     }
-    
-    if (placed_username){
+
+    if (placed_username) {
       query["placedBy"] = placed_username
     }
 
     if (!completeData) {
-     
+
       const startOfToday = new Date();
       startOfToday.setHours(0, 0, 0, 0);
 
@@ -321,16 +321,16 @@ const getSalesReport = async (req, res) => {
 
       query.createdAt = { $gte: startOfMonth, $lte: endOfMonth };
     }
-     
-    const orders = await Order.find(query, {products: 1, total: 1})
 
-    
+    const orders = await Order.find(query, { products: 1, total: 1 })
+
+
     const keysToReport = ["Cranberry 50g", "Dryfruits 50g", "Peanuts 50g", "Mix seeds 50g",
-    "Classic Coffee 50g", "Dark Coffee 50g", "Intense Coffee 50g", "Toxic Coffee 50g",
-    "Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g",
-    "Orange 25g", "Mint 25g", "Classic Coffee 25g", "Dark Coffee 25g",
-    "Intense Coffee 25g", "Toxic Coffee 25g"]
-    
+      "Classic Coffee 50g", "Dark Coffee 50g", "Intense Coffee 50g", "Toxic Coffee 50g",
+      "Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g",
+      "Orange 25g", "Mint 25g", "Classic Coffee 25g", "Dark Coffee 25g",
+      "Intense Coffee 25g", "Toxic Coffee 25g"]
+
     const totalList = [
       "Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g"
     ];
@@ -366,7 +366,7 @@ const getSalesReport = async (req, res) => {
       amount += amountTotal[index] * overallTotals[key]
     })
 
-    res.status(200).json({productTotals, overallTotals, amount});
+    res.status(200).json({ productTotals, overallTotals, amount });
   } catch (error) {
     res.status(500).json(error.message);
   }
@@ -396,12 +396,12 @@ const csvExportOrder = async (req, res) => {
     }
 
     if (placedOrders) {
-      query["products"] = { $ne: {} }; 
+      query["products"] = { $ne: {} };
     } else {
-      query["products"] = {}; 
+      query["products"] = {};
     }
-  
-    
+
+
     const orders = await Order.find(query)
       .populate("shopId", "name address addressLink contactNumber")
       .sort({ createdAt: -1 })
@@ -410,9 +410,16 @@ const csvExportOrder = async (req, res) => {
       return res.status(404).json({ message: "No orders found" });
     }
 
-
-    const formattedOrders = orders.map(order => {
     
+    const formattedOrders = orders.map(order => {
+      const date = new Date(order.createdAt);
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const year = date.getFullYear();
+      const hours = String(date.getHours()).padStart(2, "0");
+      const minutes = String(date.getMinutes()).padStart(2, "0");
+      const created_date = `${day}/${month}/${year} ${hours}:${minutes}`;
+
       const row = {
         Date: order?.createdAt.toLocaleDateString(),
         Time: order?.createdAt.toLocaleTimeString(),
@@ -420,10 +427,11 @@ const csvExportOrder = async (req, res) => {
         Contact: order?.shopId?.contactNumber || "",
         Address: order?.shopId?.address || "",
         AddressLink: order?.shopId?.addressLink || "",
-        SR: order?.placedBy
+        SR: order?.placedBy,
+        "Created At": created_date
       };
 
-      
+
       if (placedOrders && order?.products) {
         [...productList].forEach(item => {
           row[item] = order?.products.get(item) || 0;
@@ -443,13 +451,14 @@ const csvExportOrder = async (req, res) => {
       "Address",
       "AddressLink",
       "SR",
+      "Created At",
       ...(placedOrders ? [...productList, ...totalList] : [])
     ];
-    
-    
+
+
     const json2csvParser = new Parser({ fields });
     const csv = json2csvParser.parse(formattedOrders);
-    
+
     res.header("Content-Type", "text/csv");
     res.attachment("orders.csv");
     return res.send(csv);
