@@ -376,14 +376,24 @@ const getSalesReport = async (req, res) => {
 // 4. CSV Export
 const csvExportOrder = async (req, res) => {
   try {
-    const { areaId, completeData = false, placedOrders } = req.body;
+    const { areaId, username, completeData = false, placedOrders } = req.body;
 
-    if (!areaId) {
-      return res.status(400).json({ message: "Area parameter is required" });
+    if (areaId && username) {
+      return res.status(400).json({ message:"Can not select route and SR simultaneously" });
+    }
+    if (!areaId && !username) {
+      return res.status(400).json({ message:"Route or SR parameter is required" });
     }
 
     // Build query
-    const query = { areaId, deleted: false };
+    const query = { deleted: false };
+
+    if (areaId){
+      query.areaId = areaId
+    }
+    if (username) {
+      query.placedBy = username
+    }
 
     if (!completeData) {
       const startOfToday = new Date();
