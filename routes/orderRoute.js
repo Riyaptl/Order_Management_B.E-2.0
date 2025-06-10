@@ -11,7 +11,8 @@ const {
   csvExportOrder,
   dailyReport,
   getSalesReport,
-  getOrdersBySR
+  getOrdersBySR,
+  cancelOrder
 } = require("../controllers/orderController");
 
 
@@ -26,6 +27,9 @@ router.post("/all/area", authenticateUser, authorizeRoles("admin", "distributor"
 
 // 2. Read Orders by SR (Admin, Dist access)
 router.post("/all/sr", authenticateUser, authorizeRoles("admin", "sr"), getOrdersBySR);
+
+// Create Cancel Order (Admin, Dist access)
+router.post("/cancel", authenticateUser, authorizeRoles("admin", "distributor"), cancelOrder);
 
 // 3. Soft Delete Order (Admin access)
 router.post("/remove/:id", authenticateUser, authorizeRoles("admin"), softDeleteOrder);

@@ -167,7 +167,7 @@ const csvExportShop = async (req, res) => {
     
       const row = {
         Name: shop?.name || "",
-        Contact: shop?.contactNumber || "",
+        Phone: shop?.contactNumber || "",
         Address: shop?.address || "",
       };
       return row;
@@ -175,7 +175,7 @@ const csvExportShop = async (req, res) => {
   
     const fields = [
       "Name",
-      "Contact",
+      "Phone",
       "Address",
     ];
     

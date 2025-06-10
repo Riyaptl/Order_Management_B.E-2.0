@@ -34,6 +34,7 @@ const dailyReport = async (req, res) => {
       products: { $ne: {} },
       createdAt: { $gte: startOfMonth, $lte: endOfDay },
       deleted: false,
+      canceled: false
     });
 
     const keysToReport = ["Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g"];
@@ -149,7 +150,7 @@ const getOrdersByArea = async (req, res) => {
     }
 
     // Build query
-    const query = { areaId, deleted: false };
+    const query = { areaId, deleted: false, canceled: false };
 
     if (!completeData) {
 
@@ -208,8 +209,11 @@ const getOrdersBySR = async (req, res) => {
   try {
     const { username, completeData = false, page = 1, limit = 20, placedOrders } = req.body;
 
+    if (!placedOrders) {
+      return res.status(404).json("Canceled orders needs to be placed");
+    }
     // Build query
-    const query = { placedBy: username, deleted: false };
+    const query = { placedBy: username, deleted: false, canceled: false };
 
     if (!completeData) {
 
@@ -270,7 +274,7 @@ const softDeleteOrder = async (req, res) => {
     const { id } = req.params;
     const deletedBy = req.user.username;
 
-    const order = await Order.findById(id);
+    const order = await Order.findOne({id, deleted: false});
     if (!order || order.deleted) return res.status(404).json("Order not found or already deleted");
 
     order.deleted = true;
@@ -283,13 +287,34 @@ const softDeleteOrder = async (req, res) => {
   }
 };
 
+
+// 3. Soft Delete Order (Admin only)
+const cancelOrder = async (req, res) => {
+  try {
+    const { id, reason } = req.body;
+
+    const order = await Order.findOne({id, deleted: false, canceled: false});
+    if (!order || order.deleted) return res.status(404).json("Order not found or already canceled");
+
+    order.canceled = true;
+    order.canceledBy = req.user.username;
+    order.canceledAt = Date.now();
+    order.canceledReason = reason
+    await order.save();
+
+    res.status(200).json("Order canceled successfully");
+  } catch (error) {
+    res.status(500).json(error.message);
+  }
+};
+
 // get orders for sales report
 const getSalesReport = async (req, res) => {
   try {
     const { dist_username, completeData = false, placed_username } = req.body;
 
     // Build query
-    const query = { deleted: false, products: { $ne: {} } };
+    const query = { deleted: false, canceled: false, products: { $ne: {} } };
 
     // Get area ids, if distributor
     if (dist_username) {
@@ -335,7 +360,7 @@ const getSalesReport = async (req, res) => {
       "Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g"
     ];
 
-    const amountTotal = [40, 50, 27, 30]
+    const amountTotal = [40, 50, 27, 30] // PRICE
     const productTotals = {};
     const overallTotals = {};
 
@@ -386,7 +411,7 @@ const csvExportOrder = async (req, res) => {
     }
 
     // Build query
-    const query = { deleted: false };
+    const query = { deleted: false, canceled: false };
 
     if (areaId){
       query.areaId = areaId
@@ -485,5 +510,6 @@ module.exports = {
   csvExportOrder,
   dailyReport,
   getSalesReport,
-  getOrdersBySR
+  getOrdersBySR,
+  cancelOrder
 };
