@@ -15,7 +15,6 @@ const {
   cancelOrder
 } = require("../controllers/orderController");
 
-
 // Daily report
 router.post("/report", authenticateUser, authorizeRoles("admin", "sr"), dailyReport);
 

@@ -34,7 +34,7 @@ const dailyReport = async (req, res) => {
       products: { $ne: {} },
       createdAt: { $gte: startOfMonth, $lte: endOfDay },
       deleted: false,
-      canceled: false
+      canceled: {$in: [false, null]}
     });
 
     const keysToReport = ["Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g"];
@@ -150,7 +150,7 @@ const getOrdersByArea = async (req, res) => {
     }
 
     // Build query
-    const query = { areaId, deleted: false, canceled: false };
+    const query = { areaId, deleted: false, canceled: {$in: [false, null]} };
 
     if (!completeData) {
 
@@ -208,12 +208,12 @@ const getOrdersByArea = async (req, res) => {
 const getOrdersBySR = async (req, res) => {
   try {
     const { username, completeData = false, page = 1, limit = 20, placedOrders } = req.body;
-
-    if (!placedOrders) {
-      return res.status(404).json("Canceled orders needs to be placed");
+    
+    if (!username) {
+      return res.status(404).json("SR name is required");
     }
     // Build query
-    const query = { placedBy: username, deleted: false, canceled: false };
+    const query = { placedBy: username, deleted: false, canceled: {$in: [false, null]} };
 
     if (!completeData) {
 
@@ -293,7 +293,7 @@ const cancelOrder = async (req, res) => {
   try {
     const { id, reason } = req.body;
 
-    const order = await Order.findOne({id, deleted: false, canceled: false});
+    const order = await Order.findOne({id, deleted: false, canceled: {$in: [false, null]}});
     if (!order || order.deleted) return res.status(404).json("Order not found or already canceled");
 
     order.canceled = true;
@@ -314,7 +314,7 @@ const getSalesReport = async (req, res) => {
     const { dist_username, completeData = false, placed_username } = req.body;
 
     // Build query
-    const query = { deleted: false, canceled: false, products: { $ne: {} } };
+    const query = { deleted: false, canceled: {$in: [false, null]}, products: { $ne: {} } };
 
     // Get area ids, if distributor
     if (dist_username) {
@@ -411,7 +411,7 @@ const csvExportOrder = async (req, res) => {
     }
 
     // Build query
-    const query = { deleted: false, canceled: false };
+    const query = { deleted: false, canceled: {$in: [false, null]} };
 
     if (areaId){
       query.areaId = areaId
