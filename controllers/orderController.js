@@ -16,28 +16,42 @@ const totalList = [
   "Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g"
 ];
 
+const getOrders = async (query) => {
+  try {
+    const orders = await Order.find(query);
+    return orders
+  } catch (error) {
+    return error
+  }
+}
+
 // Daily report
 const dailyReport = async (req, res) => {
   try {
     const { username } = req.body;
     if (!username) return res.status(400).json({ message: "Username is required" });
 
-    const startOfMonth = new Date();
+    const nowIST = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+    const startOfMonth = new Date(nowIST); 
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    const endOfDay = new Date();
+    const endOfDay = new Date(nowIST);
     endOfDay.setHours(23, 59, 59, 999);
 
-    const orders = await Order.find({
+    // Build Query
+    const query = {
       placedBy: username,
       products: { $ne: {} },
       createdAt: { $gte: startOfMonth, $lte: endOfDay },
       deleted: false,
-      canceled: {$in: [false, null]}
-    });
+      type: "order"
+    }
 
-    const keysToReport = ["Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g"];
+    const orders = await Order.find(query);
+
+    const orderKeys = ["Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g"];
+    const keysToReport = ["Ordered Regular 50g", "Ordered Coffee 50g", "Ordered Regular 25g", "Ordered Coffee 25g", "Cancelled Regular 50g", "Cancelled Coffee 50g", "Cancelled Regular 25g", "Cancelled Coffee 25g"];
     const dailySummary = {};
 
     orders.forEach(order => {
@@ -46,18 +60,22 @@ const dailyReport = async (req, res) => {
       if (!dailySummary[dateKey]) {
         dailySummary[dateKey] = {
           date: dateKey,
-          "Regular 50g": 0,
-          "Coffee 50g": 0,
-          "Regular 25g": 0,
-          "Coffee 25g": 0,
+          ...Object.fromEntries(keysToReport.map((key) => [key, 0])),
         };
       }
 
-      keysToReport.forEach(key => {
-        const qty = order.total?.get(key) || 0;
-        dailySummary[dateKey][key] += qty;
+      orderKeys.forEach((baseKey) => {
+        const qty = order.total?.get(baseKey) || 0;
+
+        if (order.status === 'canceled') {
+          const cancelKey = `Cancelled ${baseKey}`;
+          dailySummary[dateKey][cancelKey] += qty;
+        } else {
+          const orderKey = `Ordered ${baseKey}`;
+          dailySummary[dateKey][orderKey] += qty;
+        }
       });
-    });
+      });
 
     // Convert object to array sorted by date
     const reportList = Object.values(dailySummary).sort((a, b) =>
@@ -70,11 +88,66 @@ const dailyReport = async (req, res) => {
   }
 };
 
+const dailyCallsReport = async (req, res) => {
+  try {
+    const { username } = req.body;
+    if (!username) return res.status(400).json({ message: "Username is required" });
+
+    const nowIST = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+    const startOfMonth = new Date(nowIST); 
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(nowIST);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Build Query
+    const query = {
+      placedBy: username,
+      createdAt: { $gte: startOfMonth, $lte: endOfDay },
+      deleted: false,
+      status: {$ne: "canceled"},
+      type: "order"
+    }
+
+    const orders = await Order.find(query);
+    const dailySummary = {};
+
+    orders.forEach(order => {
+      const dateKey = new Date(order.createdAt).toISOString().split('T')[0];
+      
+      if (!dailySummary[dateKey]) {
+        dailySummary[dateKey] = {
+          date: dateKey,
+          pc: 0,
+          tc: 0,
+        };
+      }
+      
+      const isEmpty =
+    !(order.products instanceof Map) ||
+    [...order.products.values()].filter((qty) => qty > 0).length === 0;
+
+    if (!isEmpty) {
+        dailySummary[dateKey].pc += 1;
+      }
+      dailySummary[dateKey].tc += 1;
+    });
+
+    // Convert object to array sorted by date
+    const reportList = Object.values(dailySummary).sort((a, b) =>
+      new Date(b.date) - new Date(a.date)
+    );
+    res.json({ totalCalls: reportList });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 // 1. Create Order
 const createOrder = async (req, res) => {
   try {
-    const { shopId, areaId, products, placedBy, location, paymentTerms, remarks, orderPlacedBy } = req.body;
+    const { shopId, areaId, products, placedBy, location, paymentTerms, remarks, orderPlacedBy, type="order" } = req.body;
 
     const createdBy = req.user.username;
     const finalPlacedBy = placedBy || createdBy
@@ -83,7 +156,7 @@ const createOrder = async (req, res) => {
     const shopExists = await Shop.findOne({ _id: shopId, deleted: { $in: [false, null] } });
     if (!areaExists || !shopExists) return res.status(400).json("Invalid area or shop ID");
 
-    let data = { shopId, areaId, placedBy: finalPlacedBy, products, createdBy, location, paymentTerms, remarks, orderPlacedBy }
+    let data = { shopId, areaId, placedBy: finalPlacedBy, products, createdBy, location, paymentTerms, remarks, orderPlacedBy, type }
 
     // Calculate total if products exist
     let total = {}
@@ -122,7 +195,7 @@ const createOrder = async (req, res) => {
 
     if (Object.keys(products).length !== 0) {
 
-      let shopData = { placedBy: finalPlacedBy, products, total, paymentTerms, remarks, orderPlacedBy, createdAt: Date.now(), orderId: order._id }
+      let shopData = { placedBy: finalPlacedBy, products, total, paymentTerms, remarks, orderPlacedBy, createdAt: Date.now(), orderId: order._id, type }
       if (!shopExists.orders) {
         shopExists.orders = []
       }
@@ -132,7 +205,7 @@ const createOrder = async (req, res) => {
       }
       await shopExists.save()
     }
-
+  
     await order.save();
     res.status(201).json({ "message": "Order created successfully" });
   } catch (error) {
@@ -140,7 +213,127 @@ const createOrder = async (req, res) => {
   }
 };
 
-// 2. get orders area wise
+// 3. Soft Delete Order (Admin only)
+const softDeleteOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deletedBy = req.user.username;
+
+    const order = await Order.findOne({_id: id, deleted: false});    
+    if (!order || order.deleted) return res.status(404).json("Order not found or already deleted");
+
+    order.deleted = true;
+    order.deletedBy = deletedBy;
+    order.deletedAt = new Date();
+
+    // remove from shop orders history
+    const shopExists = await Shop.findOne({_id: order.shopId})
+    shopExists.orders = shopExists.orders.filter(
+      (o) => o.orderId.toString() !== order._id.toString()
+    );
+    await shopExists.save()
+    await order.save();
+
+    res.status(200).json("Order deleted successfully");
+  } catch (error) {
+    res.status(500).json(error.message);
+  }
+};
+
+// Update Status Order 
+const statusOrder = async (req, res) => {
+  try {
+    const { ids, status, reason } = req.body;
+
+    ids.forEach(async (id) => {
+      const order = await Order.findOne({_id: id, deleted: false});
+      if (!order ) return res.status(404).json("Order not found");
+  
+      if (order.status != 'pending') return
+      order.status = status;
+      order.statusUpdatedBy = req.user.username;
+      order.statusUpdatedAt = Date.now();
+      order.canceledReason = reason   
+      
+      // update in shop order history
+      const shopExists = await Shop.findOne({_id: order.shopId})
+      const targetOrder = shopExists.orders.find(
+        (o) => o.orderId.toString() === order._id.toString()
+      );
+
+      if (targetOrder) {
+        targetOrder.status = order.status;
+        targetOrder.statusUpdatedAt = order.statusUpdatedAt;
+        targetOrder.canceledReason = order.canceledReason;
+        await shopExists.save()
+      }
+      await order.save();
+    })
+
+    res.status(200).json("Order status updated successfully");
+  } catch (error) {
+    res.status(500).json(error.message);
+  }
+};
+
+// date query
+const getDateQuery = (query, completeData, date="") => {
+  try {
+    if (!completeData && !date) {
+
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+
+      const endOfToday = new Date();
+      endOfToday.setHours(23, 59, 59, 999);
+
+      query.createdAt = { $gte: startOfToday, $lte: endOfToday };
+    } else if (completeData) {
+      const istOffsetMs = 5.5 * 60 * 60 * 1000; 
+      const now = new Date();
+      const startOfMonthIST = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1, 0, 0, 0) - istOffsetMs);
+      const endOfMonthIST = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999) - istOffsetMs);
+
+      query.createdAt = { $gte: startOfMonthIST, $lte: endOfMonthIST };
+    }else if (date) {
+      const istOffsetMs = 5.5 * 60 * 60 * 1000; 
+      const [year, month, day] = date.split("-").map(Number);
+      const istStartofDay = new Date(Date.UTC(year, month - 1, day, 0, 0, 0) - istOffsetMs);
+      const istEndofDay = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999) - istOffsetMs);
+      query.createdAt = { $gte: istStartofDay, $lte: istEndofDay };
+    } 
+    return query
+    
+  } catch (error) {
+    return
+  }
+}
+
+// paginated orders
+const paginatedOrders = async (page, limit, query) => {
+  try {
+    // Pagination params
+    const pageNum = parseInt(page, 10) || 1;
+    const limitNum = parseInt(limit, 10) || 50;
+    const skip = (pageNum - 1) * limitNum;
+
+    const orders = await Order.find(query)
+      .populate("shopId", "name address contactNumber addressLink areaName")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum);
+      
+    // Optional: total count for frontend pagination controls
+    const totalOrders = await Order.countDocuments(query);
+
+    return {orders, totalOrders, pageNum}
+
+  } catch (error) {
+    return error
+  }
+}
+
+// orders  by area
 const getOrdersByArea = async (req, res) => {
   try {
     const { areaId, completeData = false, page = 1, limit = 20, placedOrders } = req.body;
@@ -150,28 +343,9 @@ const getOrdersByArea = async (req, res) => {
     }
 
     // Build query
-    const query = { areaId, deleted: false, canceled: {$in: [false, null]} };
+    const query_prev = { areaId, deleted: false, status: {$ne: 'canceled' } };
 
-    if (!completeData) {
-
-      const startOfToday = new Date();
-      startOfToday.setHours(0, 0, 0, 0);
-
-      const endOfToday = new Date();
-      endOfToday.setHours(23, 59, 59, 999);
-
-      query.createdAt = { $gte: startOfToday, $lte: endOfToday };
-    } else {
-      const now = new Date();
-
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      startOfMonth.setHours(0, 0, 0, 0);
-
-      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      endOfMonth.setHours(23, 59, 59, 999);
-
-      query.createdAt = { $gte: startOfMonth, $lte: endOfMonth };
-    }
+    const query = getDateQuery(query_prev, completeData, "")
 
     if (placedOrders) {
       query["products"] = { $ne: {} };
@@ -179,19 +353,8 @@ const getOrdersByArea = async (req, res) => {
       query["products"] = {};
     }
 
-    // Pagination params
-    const pageNum = parseInt(page, 10) || 1;
-    const limitNum = parseInt(limit, 10) || 50;
-    const skip = (pageNum - 1) * limitNum;
-
-    const orders = await Order.find(query)
-      .populate("shopId", "name address contactNumber addressLink")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limitNum);
-
-    // Optional: total count for frontend pagination controls
-    const totalOrders = await Order.countDocuments(query);
+    // get paginated orders
+    const {orders, totalOrders, pageNum} = await paginatedOrders(page, limit, query);
 
     res.status(200).json({
       orders,
@@ -207,34 +370,15 @@ const getOrdersByArea = async (req, res) => {
 // 2. get orders- placed by
 const getOrdersBySR = async (req, res) => {
   try {
-    const { username, completeData = false, page = 1, limit = 20, placedOrders } = req.body;
+    const { username, completeData = false, page = 1, limit = 60, placedOrders } = req.body;
     
     if (!username) {
       return res.status(404).json("SR name is required");
     }
     // Build query
-    const query = { placedBy: username, deleted: false, canceled: {$in: [false, null]} };
+    const query_prev = { placedBy: username, deleted: false, status: {$ne: "canceled"} };
 
-    if (!completeData) {
-
-      const startOfToday = new Date();
-      startOfToday.setHours(0, 0, 0, 0);
-
-      const endOfToday = new Date();
-      endOfToday.setHours(23, 59, 59, 999);
-
-      query.createdAt = { $gte: startOfToday, $lte: endOfToday };
-    } else {
-      const now = new Date();
-
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      startOfMonth.setHours(0, 0, 0, 0);
-
-      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      endOfMonth.setHours(23, 59, 59, 999);
-
-      query.createdAt = { $gte: startOfMonth, $lte: endOfMonth };
-    }
+    const query = getDateQuery(query_prev, completeData, "")
 
     if (placedOrders) {
       query["products"] = { $ne: {} };
@@ -242,19 +386,9 @@ const getOrdersBySR = async (req, res) => {
       query["products"] = {};
     }
 
-    // Pagination params
-    const pageNum = parseInt(page, 10) || 1;
-    const limitNum = parseInt(limit, 10) || 50;
-    const skip = (pageNum - 1) * limitNum;
-
-    const orders = await Order.find(query)
-      .populate("shopId", "name address contactNumber addressLink")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limitNum);
-
-    // Optional: total count for frontend pagination controls
-    const totalOrders = await Order.countDocuments(query);
+    
+    // get paginated orders
+    const {orders, totalOrders, pageNum} = await paginatedOrders(page, limit, query);
 
     res.status(200).json({
       orders,
@@ -267,89 +401,93 @@ const getOrdersBySR = async (req, res) => {
   }
 };
 
-
-// 3. Soft Delete Order (Admin only)
-const softDeleteOrder = async (req, res) => {
+// Orders by date
+const getOrdersByDate = async (req, res) => {
   try {
-    const { id } = req.params;
-    const deletedBy = req.user.username;
-
-    const order = await Order.findOne({id, deleted: false});
-    if (!order || order.deleted) return res.status(404).json("Order not found or already deleted");
-
-    order.deleted = true;
-    order.deletedBy = deletedBy;
-    await order.save();
-
-    res.status(200).json("Order deleted successfully");
-  } catch (error) {
-    res.status(500).json(error.message);
-  }
-};
-
-
-// 3. Soft Delete Order (Admin only)
-const cancelOrder = async (req, res) => {
-  try {
-    const { id, reason } = req.body;
-
-    const order = await Order.findOne({id, deleted: false, canceled: {$in: [false, null]}});
-    if (!order || order.deleted) return res.status(404).json("Order not found or already canceled");
-
-    order.canceled = true;
-    order.canceledBy = req.user.username;
-    order.canceledAt = Date.now();
-    order.canceledReason = reason
-    await order.save();
-
-    res.status(200).json("Order canceled successfully");
-  } catch (error) {
-    res.status(500).json(error.message);
-  }
-};
-
-// get orders for sales report
-const getSalesReport = async (req, res) => {
-  try {
-    const { dist_username, completeData = false, placed_username } = req.body;
-
+  
+    const { username, page = 1, limit = 60, placedOrders, date, dist="" } = req.body;
+  
     // Build query
-    const query = { deleted: false, canceled: {$in: [false, null]}, products: { $ne: {} } };
-
-    // Get area ids, if distributor
-    if (dist_username) {
-      const areaIds = await Area.find({ distributor: dist_username }, "id")
-      query["areaId"] = { $in: areaIds }
+    const query_prev = { deleted: false, status: {$ne: "canceled"} };
+    if (username) {
+      query_prev.placedBy = username
     }
 
-    if (placed_username) {
-      query["placedBy"] = placed_username
+    const query = getDateQuery(query_prev, false, date)
+
+    if (placedOrders) {
+      query["products"] = { $ne: {} };
+    } else {
+      query["products"] = {};
+    }
+
+    if (dist) {
+      if (username) return res.status(404).json("Invalid Entry")
+      const areas = await Area.find({distributor: dist, deleted: {$in: [false, null]}}, {_id: 1})
+      const areaIds = []
+      areas.forEach((obj) => areaIds.push(obj._id))
+      query.areaId = {$in: areaIds}
+    }
+
+    // get paginated orders
+    const {orders, totalOrders, pageNum} = await paginatedOrders(page, limit, query);
+
+    res.status(200).json({
+      orders,
+      currentPage: pageNum,
+      totalPages: Math.ceil(totalOrders / limit),
+      totalCount: totalOrders
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+//  get canceled/ deleted orders - placed by
+const getRevokedOrders = async (req, res) => {
+  try {
+    const { username, completeData = true, page = 1, limit = 60, deleted , date, dist_username } = req.body;
+    
+    // Build query
+    const query_prev = { deleted };
+
+    if (!deleted){
+      query_prev.status = "canceled"
     }
 
     if (!completeData) {
-
-      const startOfToday = new Date();
-      startOfToday.setHours(0, 0, 0, 0);
-
-      const endOfToday = new Date();
-      endOfToday.setHours(23, 59, 59, 999);
-
-      query.createdAt = { $gte: startOfToday, $lte: endOfToday };
-    } else {
-      const now = new Date();
-
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      startOfMonth.setHours(0, 0, 0, 0);
-
-      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      endOfMonth.setHours(23, 59, 59, 999);
-
-      query.createdAt = { $gte: startOfMonth, $lte: endOfMonth };
+      query_prev.placedBy = username
     }
 
-    const orders = await Order.find(query, { products: 1, total: 1 })
+    if (dist_username) {
+      const areaIds = await Area.find({ distributor: dist_username }, "id")
+      query_prev["areaId"] = { $in: areaIds }
+    }
 
+    let query
+    if (date) {
+      query = getDateQuery(query_prev, false, date)
+    } else {
+      query = getDateQuery(query_prev, true, "")
 
+    }
+    
+    // get paginated orders
+    const {orders, totalOrders, pageNum} = await paginatedOrders(page, limit, query);
+    
+    res.status(200).json({
+      orders,
+      currentPage: pageNum,
+      totalPages: Math.ceil(totalOrders / limit),
+      totalCount: totalOrders
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getReport = async (orders) => {
+  try {
     const keysToReport = ["Cranberry 50g", "Dryfruits 50g", "Peanuts 50g", "Mix seeds 50g",
       "Classic Coffee 50g", "Dark Coffee 50g", "Intense Coffee 50g", "Toxic Coffee 50g",
       "Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g",
@@ -391,60 +529,97 @@ const getSalesReport = async (req, res) => {
       amount += amountTotal[index] * overallTotals[key]
     })
 
-    res.status(200).json({ productTotals, overallTotals, amount });
+    const report = { productTotals, overallTotals, amount }
+   return report
+  } catch (error) {
+    return error
+  }
+}
+
+
+const buildReportQuery = async (dist_username, placed_username, completeData, date) => {
+  try {
+    // Build query
+    const query_prev = { deleted: false, products: { $ne: {} }};
+
+    // Get area ids, if distributor
+    if (dist_username) {
+      const areaIds = await Area.find({ distributor: dist_username }, "id")
+      query_prev["areaId"] = { $in: areaIds }
+    }
+
+    if (placed_username) {
+      query_prev["placedBy"] = placed_username
+    }
+
+    // Date query
+    const query = await getDateQuery(query_prev, completeData, date)
+
+    return query
+  } catch (error) {
+    return error
+  }
+}
+
+// get orders for sales report
+const getSalesReport = async (req, res) => {
+  try {
+    const { dist_username, completeData=false, placed_username, date } = req.body;
+
+    if (completeData && date) {
+      return res.status(404).jaon({message: "Invalid Entry"})
+    }
+
+    const query = await buildReportQuery(dist_username, placed_username, completeData, date)
+
+    // For Order type
+    const order_query = {...query, type: "order", status: {$ne: 'canceled'}}
+    const order_orders = await Order.find(order_query, { products: 1, total: 1 })
+    const saleReport = await getReport(order_orders)
+
+    // For replacement type
+    const replcement_query = {...query, type: "replacement", status: {$ne: 'canceled'}}
+    const replacement_orders = await Order.find(replcement_query, { products: 1, total: 1 })
+    const saleReplaceReport = await getReport(replacement_orders)
+    
+    res.status(200).json({ saleReport, saleReplaceReport });
+  } catch (error) {
+    res.status(500).json(error.message);
+  }
+};
+
+// get orders for sales report
+const getCancelledReport = async (req, res) => {
+  try {
+    const { dist_username, completeData=false, placed_username, date } = req.body;
+
+    if (completeData && date) {
+      return res.status(404).jaon({message: "Invalid Entry"})
+    }
+    
+    const query = await buildReportQuery(dist_username, placed_username, completeData, date)
+
+    // For Order type
+    const order_query = {...query, type: "order", status: 'canceled'}
+    const order_orders = await Order.find(order_query, { products: 1, total: 1 })
+    const cancelledReport = await getReport(order_orders)
+
+    // For replacement type
+    const replcement_query = {...query, type: "replacement", status: 'canceled'}
+    const replacement_orders = await Order.find(replcement_query, { products: 1, total: 1 })
+    const cancelledReplaceReport = await getReport(replacement_orders)
+    
+    res.status(200).json({ cancelledReport, cancelledReplaceReport });
+
   } catch (error) {
     res.status(500).json(error.message);
   }
 };
 
 
-// 4. CSV Export
-const csvExportOrder = async (req, res) => {
+// CSV
+const prepareCSV = async (orders, placedOrders) => {
   try {
-    const { areaId, username, completeData = false, placedOrders } = req.body;
-
-    if (areaId && username) {
-      return res.status(400).json({ message:"Can not select route and SR simultaneously" });
-    }
-    if (!areaId && !username) {
-      return res.status(400).json({ message:"Route or SR parameter is required" });
-    }
-
-    // Build query
-    const query = { deleted: false, canceled: {$in: [false, null]} };
-
-    if (areaId){
-      query.areaId = areaId
-    }
-    if (username) {
-      query.placedBy = username
-    }
-
-    if (!completeData) {
-      const startOfToday = new Date();
-      startOfToday.setHours(0, 0, 0, 0);
-
-      const endOfToday = new Date();
-      endOfToday.setHours(23, 59, 59, 999);
-
-      query.createdAt = { $gte: startOfToday, $lte: endOfToday };
-    }
-
-    if (placedOrders) {
-      query["products"] = { $ne: {} };
-    } else {
-      query["products"] = {};
-    }
-
-
-    const orders = await Order.find(query)
-      .populate("shopId", "name address addressLink contactNumber")
-      .sort({ createdAt: -1 })
-
-    if (!orders.length) {
-      return res.status(404).json({ message: "No orders found" });
-    }
-
     
     const formattedOrders = orders.map(order => {
       const date = new Date(order.createdAt);
@@ -494,6 +669,96 @@ const csvExportOrder = async (req, res) => {
     const json2csvParser = new Parser({ fields });
     const csv = json2csvParser.parse(formattedOrders);
 
+    return csv
+  } catch (error) {
+    return error
+  }
+}
+
+// 4. CSV Export
+const csvExportOrder = async (req, res) => {
+  try {
+    const { areaId, username, completeData = false, placedOrders, date } = req.body;
+
+    if (completeData && date) {
+      return res.status(400).json({ message:"Invalid entry" });
+    }
+    if (areaId && (username || date)) {
+      return res.status(400).json({ message:"Invalid entry" });
+    }
+    if (!areaId && !(username || date)) {
+      return res.status(400).json({ message:"Route, SR or Date is required" });
+    }
+
+    // Build query
+    const query_prev = { deleted: false };
+
+    if (areaId){
+      query_prev.areaId = areaId
+    }
+    if (username) {
+      query_prev.placedBy = username
+    }
+    
+    const query = getDateQuery(query_prev, completeData, date)
+
+    if (placedOrders) {
+      query["products"] = { $ne: {} };
+    } else {
+      query["products"] = {};
+    }
+
+    const orders = await Order.find(query)
+      .populate("shopId", "name address addressLink contactNumber")
+      .sort({ createdAt: -1 })
+
+    if (!orders.length) {
+      return res.status(404).json({ message: "No orders found" });
+    }
+
+    const csv = await prepareCSV(orders, placedOrders)
+
+    res.header("Content-Type", "text/csv");
+    res.attachment("orders.csv");
+    return res.send(csv);
+
+  } catch (error) {
+    res.status(500).json(error.message);
+  }
+};
+
+const csvExportRevokedOrder = async (req, res) => {
+  try {
+    const { username, completeData = true, deleted , date } = req.body;
+    
+    const query_prev = { deleted };
+
+    if (!deleted){
+      query_prev.status = "canceled"
+    }
+
+    if (!completeData) {
+      query_prev.placedBy = username
+    }
+
+    let query
+    if (date) {
+      query = getDateQuery(query_prev, false, date)
+    } else {
+      query = getDateQuery(query_prev, true, "")
+
+    }
+
+    const orders = await Order.find(query)
+      .populate("shopId", "name address addressLink contactNumber")
+      .sort({ createdAt: -1 })
+
+    if (!orders.length) {
+      return res.status(404).json({ message: "No orders found" });
+    }
+
+    const csv = await prepareCSV(orders, true)
+
     res.header("Content-Type", "text/csv");
     res.attachment("orders.csv");
     return res.send(csv);
@@ -510,6 +775,11 @@ module.exports = {
   csvExportOrder,
   dailyReport,
   getSalesReport,
+  getCancelledReport,
   getOrdersBySR,
-  cancelOrder
+  statusOrder,
+  getRevokedOrders,
+  getOrdersByDate,
+  csvExportRevokedOrder,
+  dailyCallsReport
 };

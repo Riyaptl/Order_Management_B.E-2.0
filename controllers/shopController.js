@@ -10,12 +10,15 @@ const csv = require('csv-parser');
 // 1. Create Shop
 const createShop = async (req, res) => {
   try {
-    const { name, address, contactNumber, addressLink, areaId } = req.body;
-    const shop = new Shop({ name, address, contactNumber, addressLink, createdBy: req.user.username });
-    
+    const { name, address, contactNumber, addressLink, areaId, activity } = req.body;
+  
+    const shop = new Shop({ name, address, contactNumber, addressLink, createdBy: req.user.username, activity});
+
     const area = await Area.findOneAndUpdate({_id: areaId, deleted: { $in: [false, null] }}, { $push: { shops: shop._id } }, {new: true});
     if (!area) return res.status(404).json("Area not found");
-    
+
+    shop.area = areaId,
+    shop.areaName = area.name
     await shop.save();
     res.status(201).json("Shop created successfully");
   } catch (error) {
@@ -29,7 +32,7 @@ const updateShop = async (req, res) => {
     const { id } = req.params;
     const updates = {};
 
-    const allowedFields = ["name", "address", "contactNumber", "addressLink"];
+    const allowedFields = ["name", "address", "contactNumber", "addressLink", "activity"];
     allowedFields.forEach((field) => {
       if (req.body[field] !== undefined) {
         updates[field] = req.body[field];
@@ -56,14 +59,33 @@ const deleteShop = async (req, res) => {
     const area = await Area.findOneAndUpdate({_id: areaId, deleted: { $in: [false, null] }}, { $pull: { shops: id } }, {new: true});
     if (!area) return res.status(404).json("Area not found");
 
-    deletedShop.area = area.id
+    // deletedShop.area = area.id
+    // deletedShop.areaName = area.name
     deletedShop.deleted = true 
     deletedShop.deletedBy = req.user.username
     deletedShop.deletedAt = Date.now()
     await deletedShop.save()
-    console.log(deletedShop);
-    
+ 
     res.status(200).json({"message": "Shop deleted and removed from respective route"});
+  } catch (error) {
+    res.status(500).json(error.message);
+  }
+};
+
+// Blacklist Shop
+const blacklistShop = async (req, res) => {
+  try {
+    const { id } = req.body;
+    const blacklistedShop = await Shop.findOne({_id: id, deleted: { $in: [false, null] }});
+    if (!blacklistedShop) return res.status(404).json("Shop not found");
+    if (blacklistedShop.blacklisted) return res.status(404).json({message: "Shop is already blacklisted"})
+
+    blacklistedShop.blacklisted = true 
+    blacklistedShop.blacklistedBy = req.user.username
+    blacklistedShop.blacklistedAt = Date.now()
+    await blacklistedShop.save()
+
+    res.status(200).json({"message": "Shop blacklisted successfully."});
   } catch (error) {
     res.status(500).json(error.message);
   }
@@ -72,17 +94,17 @@ const deleteShop = async (req, res) => {
 // 4. Get shops under a specific area
 const getShopsByArea = async (req, res) => {
   try {
-    const { areaId } = req.body;
-    const areaShops = await Area.findOne({_id: areaId, deleted: { $in: [false, null] }}).populate({
-      path: "shops",
-      select: "name address addressLink contactNumber createdBy createdAt updatedBy deleted", 
-    });
-    if (!areaShops) return res.status(404).json("Area not found");
-
-    const activeShops = areaShops?.shops?.filter((shop) => shop.deleted !== true);
+    const { areaId, activity } = req.body;
+    let query = {area: areaId, deleted: { $in: [false, null] }}
+    if (activity){
+      query.activity = true
+    }
+    
+    const areaShops = await Shop.find(query).sort({createdAt: -1})
+    if (!areaShops) return res.status(404).json("Shops not found");
 
     res.status(200).json({
-      shops: activeShops,
+      shops: areaShops,
     });
 
    
@@ -127,17 +149,21 @@ const getShopOrders = async (req, res) => {
 // 6. Change area 
 const shiftArea = async (req, res) => {
   try {
-    const { prevAreaId, newAreaId, id } = req.body;
-    const shopObjId  = new ObjectId(id);
-    
-    const prevArea = await Area.findOneAndUpdate({_id: prevAreaId, deleted: { $in: [false, null] }}, { $pull: { shops: shopObjId } }, {new: true});
-    if (!prevArea) return res.status(404).json("Area not found");
-    
-    const newArea = await Area.findOneAndUpdate({_id: newAreaId, deleted: { $in: [false, null] }}, { $push: { shops: shopObjId } }, {new: true});
-    if (!newArea) return res.status(404).json("Area not found");
-    
-    const areaId = new ObjectId(newAreaId);
-    await Order.updateMany({shopId: id}, { $set: { areaId } });
+    const { prevAreaId, newAreaId, ids } = req.body;
+
+    ids.forEach(async (id) => {
+      const shopObjId  = new ObjectId(id);
+      
+      const prevArea = await Area.findOneAndUpdate({_id: prevAreaId, deleted: { $in: [false, null] }}, { $pull: { shops: shopObjId } }, {new: true});
+      if (!prevArea) return res.status(404).json("Area not found");
+      
+      const newArea = await Area.findOneAndUpdate({_id: newAreaId, deleted: { $in: [false, null] }}, { $push: { shops: shopObjId } }, {new: true});
+      if (!newArea) return res.status(404).json("Area not found");
+      
+      const areaId = new ObjectId(newAreaId);
+      await Shop.findOneAndUpdate({_id: shopObjId, deleted: { $in: [false, null] }}, {$set: {area: newAreaId, prevArea: prevAreaId, areaName: newArea.name, prevAreaName: prevArea.name, areaShiftedAt: Date.now(), areaShiftedBy: req.user.username}}, {new: true})
+      await Order.updateMany({shopId: id}, { $set: { areaId } });
+    })
     
     res.status(200).json({"message": "Shop shifted successfully"});
 
@@ -164,11 +190,12 @@ const csvExportShop = async (req, res) => {
     const shops = area.shops
 
     const formattedShops = shops.map(shop => {
-    
       const row = {
         Name: shop?.name || "",
         Phone: shop?.contactNumber || "",
         Address: shop?.address || "",
+        "Previous Route": shop?.prevAreaName || "",
+        "Current Route": shop?.areaName || ""
       };
       return row;
     });
@@ -177,6 +204,8 @@ const csvExportShop = async (req, res) => {
       "Name",
       "Phone",
       "Address",
+      "Previous Route",
+      "Current Route"
     ];
     
     
@@ -198,11 +227,13 @@ const csvImportShop = async (req, res) => {
   const shopsToInsert = [];
 
   try {
-    const area = await Area.findOne({_id: areaId, deleted: { $in: [false, null] } });
-    if (!area) {
+    const area1 = await Area.findOne({_id: areaId, deleted: { $in: [false, null] } });
+    if (!area1) {
       return res.status(404).json({ "message": 'Area not found' });
     }
     
+    const areaName = area1.name
+    const area = area1._id
     fs.createReadStream(filePath)
       .pipe(csv())
       .on('data', (row) => {
@@ -217,7 +248,9 @@ const csvImportShop = async (req, res) => {
             address,
             contactNumber,
             addressLink,
-            createdBy: req.user.username
+            createdBy: req.user.username,
+            area,
+            areaName
           });
         }        
       })
@@ -230,8 +263,8 @@ const csvImportShop = async (req, res) => {
         const createdShops = await Shop.insertMany(shopsToInsert);
         
         const shopIds = createdShops.map(shop => shop._id);
-        area.shops.push(...shopIds);
-        await area.save();
+        area1.shops.push(...shopIds);
+        await area1.save();
 
         await fsPromises.unlink(filePath);
 
@@ -243,6 +276,25 @@ const csvImportShop = async (req, res) => {
   }
 }
 
+const updateShopAreaNames = async (req, res) => {
+  const areas = await Area.find({ deleted: {$in: [false, null]} }).select('name shops');
+
+  for (const area of areas) {
+    const shopIds = area.shops;
+    if (area.name === "Maninagar 1"){
+      console.log(shopIds, area.name);
+    }
+    
+    await Shop.updateMany(
+      { _id: { $in: shopIds } },
+      { $set: { areaName: area.name, area: area._id } }
+    );
+  }
+
+  console.log("Updated all shops with area names.");
+  res.status(201).json('Done')
+};
+
 module.exports = {
   createShop,
   updateShop,
@@ -252,5 +304,7 @@ module.exports = {
   csvExportShop,
   shiftArea,
   csvImportShop,
-  getShopOrders
+  getShopOrders,
+  updateShopAreaNames,
+  blacklistShop
 };

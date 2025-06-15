@@ -71,23 +71,36 @@ const orderSchema = new mongoose.Schema({
   deletedBy: {
     type: String
   },
+  deletedAt: {
+    type: Date
+  },
   createdBy: {
     type: String,
     required: true
   },
-  canceled: {
-    type: Boolean,
-    default: false
+  status: {
+    type: String,
+    enum: ["delivered", "pending", "canceled"],
+    default: "pending"
   },
-  canceledBy: {
+  statusUpdatedBy: {
     type: String,
   },
-  canceledAt: {
+  statusUpdatedAt: {
     type: Date,
   },
   canceledReason: {
     type: String,
   },
-}, { timestamps: true });
+  type: {
+    type: String,
+    enum: ["order", "replacement"],
+    default: "order"
+  },
+  createdAt: {
+    type: Date
+  }
+}, {timestamps: true});
+// { timestamps: true }
 
 module.exports = mongoose.model("Order", orderSchema);

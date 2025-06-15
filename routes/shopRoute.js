@@ -10,7 +10,9 @@ const {
   getShopOrders,
   csvExportShop,
   shiftArea,
-  csvImportShop
+  csvImportShop,
+  updateShopAreaNames,
+  blacklistShop
 } = require("../controllers/shopController");
 const authenticateUser = require("../middlewares/JwtAuth");
 const checkRole = require("../middlewares/RoleAuth");
@@ -24,21 +26,23 @@ const upload = multer({ dest: uploadDir });
 
 
 // Admin-only access for create, update, delete
-router.post("/", authenticateUser, checkRole("admin", "sr"), createShop);
-router.post("/:id", authenticateUser, checkRole("admin", "sr"), updateShop);
-router.delete("/", authenticateUser, checkRole("admin", "sr"), deleteShop);
-router.post("/shift/area", authenticateUser, checkRole("admin", "sr"), shiftArea);
+router.post("/", authenticateUser, createShop);
+router.post("/:id", authenticateUser, updateShop);
+router.post("/delete/one", authenticateUser, deleteShop);
+router.post("/blacklist/one", authenticateUser, blacklistShop);
+router.post("/shift/area", authenticateUser, checkRole('admin', 'sr'), shiftArea);
 
 // Public or protected read
-router.post("/route/all", authenticateUser, checkRole("admin", "sr"), getShopsByArea);
-router.get("/details/:id", authenticateUser, checkRole("admin", "sr"), getShopDetailes);
-router.get("/orders/:id", authenticateUser, checkRole("admin", "sr"), getShopOrders);
+router.post("/route/all", authenticateUser, getShopsByArea);
+router.get("/details/:id", authenticateUser, getShopDetailes);
+router.get("/orders/:id", authenticateUser, getShopOrders);
 
 // 4. CSV Export
-router.post("/csv/export", authenticateUser, checkRole("admin", "sr"), csvExportShop);
+router.post("/csv/export", authenticateUser, csvExportShop);
 
 // 4. CSV Import
 router.use(authenticateUser, checkRole("admin"))
 router.post("/csv/import/:areaId", upload.single('file'), csvImportShop);
 
+router.post("/area/name", updateShopAreaNames);
 module.exports = router;

@@ -1,5 +1,6 @@
 const Area = require("../models/Area")
 const { Parser } = require("json2csv");
+const Shop = require("../models/Shop");
 
 
 // 1. Create Area
@@ -37,6 +38,11 @@ const updateAreaName = async (req, res) => {
     const existingArea = await Area.findOne({ name: name.trim(), _id: { $ne: id }, deleted: { $in: [false, null] } });
     if (existingArea) {
       return res.status(400).json("Area with this name already exists");
+    }
+
+    if (name) {
+      await Shop.updateMany({area:id}, {$set: {areaName: name}})
+      await Shop.updateMany({prevArea:id}, {$set: {prevAreaName: name}})
     }
 
     const area = await Area.findByIdAndUpdate(id, { name: name.trim(), areas, distributor: dist_trimmed, updatedBy: req.user.username, updatedAt: Date.now()}, { new: true });
@@ -86,7 +92,7 @@ const getAllAreas = async (req, res) => {
 const getAreas = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1; 
-    const limit = 20;
+    const limit = 24;
     const skip = (page - 1) * limit;
 
     const totalCount = await Area.countDocuments({deleted: { $in: [false, null] }});

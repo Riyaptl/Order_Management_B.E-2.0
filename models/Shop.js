@@ -52,7 +52,23 @@ const ordersSchema = new mongoose.Schema({
   },
   createdAt: {
     type: Date,
-  }
+  },
+  status: {
+    type: String,
+    enum: ["pending", "delivered", "canceled"],
+    default: "pending"
+  },
+  canceledReason: {
+    type: String
+  },
+  statusUpdatedAt: {
+    type: Date
+  },
+  type: {
+    type: String,
+    enum: ["order", "replacement"],
+    default: "order"
+  },
 }, { _id: false }); 
 
 const ShopSchema = new mongoose.Schema({
@@ -86,9 +102,39 @@ const ShopSchema = new mongoose.Schema({
   deletedAt: {
     type: Date,
   },
+  prevArea: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Area",
+  },
   area: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Area",
+  },
+  prevAreaName: {
+    type: String,
+  },
+  areaName: {
+    type: String,
+  },
+  areaShiftedBy: {
+    type: String,
+  },
+  areaShiftedAt: {
+    type: Date,
+  },
+  blacklisted: {
+    type: Boolean,
+    defaulf: false
+  },
+  blacklistedAt: {
+    type: Date,
+  },
+  blacklistedBy: {
+    type: String,
+  },
+  activity: {
+    type: Boolean,
+    default: false
   },
   orders: [ordersSchema]
 }, { timestamps: true });
