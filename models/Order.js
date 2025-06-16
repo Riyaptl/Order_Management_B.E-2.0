@@ -100,7 +100,7 @@ const orderSchema = new mongoose.Schema({
   createdAt: {
     type: Date
   }
-}, {timestamps: true});
+});
 // { timestamps: true }
 
 module.exports = mongoose.model("Order", orderSchema);

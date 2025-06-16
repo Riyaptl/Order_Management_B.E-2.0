@@ -147,7 +147,7 @@ const dailyCallsReport = async (req, res) => {
 // 1. Create Order
 const createOrder = async (req, res) => {
   try {
-    const { shopId, areaId, products, placedBy, location, paymentTerms, remarks, orderPlacedBy, type="order" } = req.body;
+    const { shopId, areaId, products, placedBy, location, paymentTerms, remarks, orderPlacedBy, type="order", date } = req.body;
 
     const createdBy = req.user.username;
     const finalPlacedBy = placedBy || createdBy
@@ -156,7 +156,7 @@ const createOrder = async (req, res) => {
     const shopExists = await Shop.findOne({ _id: shopId, deleted: { $in: [false, null] } });
     if (!areaExists || !shopExists) return res.status(400).json("Invalid area or shop ID");
 
-    let data = { shopId, areaId, placedBy: finalPlacedBy, products, createdBy, location, paymentTerms, remarks, orderPlacedBy, type }
+    let data = { shopId, areaId, placedBy: finalPlacedBy, products, createdBy, location, paymentTerms, remarks, orderPlacedBy, type, createdAt: date }
 
     // Calculate total if products exist
     let total = {}
@@ -195,7 +195,7 @@ const createOrder = async (req, res) => {
 
     if (Object.keys(products).length !== 0) {
 
-      let shopData = { placedBy: finalPlacedBy, products, total, paymentTerms, remarks, orderPlacedBy, createdAt: Date.now(), orderId: order._id, type }
+      let shopData = { placedBy: finalPlacedBy, products, total, paymentTerms, remarks, orderPlacedBy, createdAt: date, orderId: order._id, type }
       if (!shopExists.orders) {
         shopExists.orders = []
       }
