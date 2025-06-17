@@ -16,14 +16,6 @@ const totalList = [
   "Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g"
 ];
 
-const getOrders = async (query) => {
-  try {
-    const orders = await Order.find(query);
-    return orders
-  } catch (error) {
-    return error
-  }
-}
 
 // Daily report
 const dailyReport = async (req, res) => {
@@ -249,11 +241,12 @@ const statusOrder = async (req, res) => {
       const order = await Order.findOne({_id: id, deleted: false});
       if (!order ) return res.status(404).json("Order not found");
   
-      if (order.status != 'pending') return
-      order.status = status;
+      if (order.status === 'pending') {
+        order.status = status;
+      }
+      order.canceledReason = reason   
       order.statusUpdatedBy = req.user.username;
       order.statusUpdatedAt = Date.now();
-      order.canceledReason = reason   
       
       // update in shop order history
       const shopExists = await Shop.findOne({_id: order.shopId})
