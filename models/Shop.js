@@ -136,6 +136,11 @@ const ShopSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  type: {
+    type: String,
+    enum: ["mt", "gt"],
+    default: "gt"
+  },
   orders: [ordersSchema]
 }, { timestamps: true });
 

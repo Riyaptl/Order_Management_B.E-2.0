@@ -10,10 +10,9 @@ const csv = require('csv-parser');
 // 1. Create Shop
 const createShop = async (req, res) => {
   try {
-    const { name, address, contactNumber, addressLink, areaId, activity } = req.body;
+    const { name, address, contactNumber, addressLink, areaId, activity, type } = req.body;
   
-    const shop = new Shop({ name, address, contactNumber, addressLink, createdBy: req.user.username, activity});
-
+    const shop = new Shop({ name, address, contactNumber, addressLink, createdBy: req.user.username, activity, type});
     const area = await Area.findOneAndUpdate({_id: areaId, deleted: { $in: [false, null] }}, { $push: { shops: shop._id } }, {new: true});
     if (!area) return res.status(404).json("Area not found");
 
@@ -32,7 +31,7 @@ const updateShop = async (req, res) => {
     const { id } = req.params;
     const updates = {};
 
-    const allowedFields = ["name", "address", "contactNumber", "addressLink", "activity"];
+    const allowedFields = ["name", "address", "contactNumber", "addressLink", "activity", "type"];
     allowedFields.forEach((field) => {
       if (req.body[field] !== undefined) {
         updates[field] = req.body[field];
@@ -94,12 +93,15 @@ const blacklistShop = async (req, res) => {
 // 4. Get shops under a specific area
 const getShopsByArea = async (req, res) => {
   try {
-    const { areaId, activity } = req.body;
+    const { areaId, activity, type } = req.body;
     let query = {area: areaId, deleted: { $in: [false, null] }}
     if (activity){
       query.activity = true
     }
-    
+    if (type){
+      query.type = type
+    }
+
     const areaShops = await Shop.find(query).sort({createdAt: -1})
     if (!areaShops) return res.status(404).json("Shops not found");
 
