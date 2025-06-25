@@ -3,7 +3,7 @@ const User = require("../models/User");
 const getSRDetails = async (req, res) => {
   try {
     const {username} = req.body
-    const sr = await User.findOne({ role: "sr", username });
+    const sr = await User.findOne({ role: {$in : ["sr", "tl"] }, username });
     if (!sr) return res.status(404).json("SR not found")
     res.status(200).json(sr);
   } catch (error) {
@@ -13,7 +13,7 @@ const getSRDetails = async (req, res) => {
 
 const getAllSRs = async (req, res) => {
   try {
-    const srs = await User.find({ role: "sr" }).select("_id username");
+    const srs = await User.find({ role: {$in : ["sr", "tl"] } }).select("_id username");
     res.status(200).json(srs);
   } catch (error) {
     res.status(500).json(error.message);

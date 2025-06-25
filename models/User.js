@@ -20,7 +20,7 @@ const UserSchema = new Schema({
     },
     role: { 
         type: String, 
-        enum: ['sr', 'admin', "distributor", "me"], 
+        enum: ['sr', 'admin', "distributor", "me", "tl"], 
         default: 'sr' 
     },
     otp: {

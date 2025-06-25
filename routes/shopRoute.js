@@ -29,8 +29,8 @@ const upload = multer({ dest: uploadDir });
 router.post("/", authenticateUser, createShop);
 router.post("/:id", authenticateUser, updateShop);
 router.post("/delete/one", authenticateUser, deleteShop);
-router.post("/blacklist/one", authenticateUser, checkRole("admin", "sr", "distributor"), blacklistShop);
-router.post("/shift/area", authenticateUser, checkRole('admin', 'sr'), shiftArea);
+router.post("/blacklist/one", authenticateUser, checkRole("admin", "sr", "distributor", "tl"), blacklistShop);
+router.post("/shift/area", authenticateUser, checkRole('admin', 'sr', "tl"), shiftArea);
 
 // Public or protected read
 router.post("/route/all", authenticateUser, getShopsByArea);

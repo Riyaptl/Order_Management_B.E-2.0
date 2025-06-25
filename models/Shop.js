@@ -39,7 +39,7 @@ const ordersSchema = new mongoose.Schema({
   },
   paymentTerms: {
     type: String,
-    enum: ["cash", "company credit", "sr credit", "distributor credit"]
+    enum: ["cash", "company credit", "sr credit", "distributor credit", ""]
   },
   placedBy: {
     type: String,
@@ -140,6 +140,9 @@ const ShopSchema = new mongoose.Schema({
     type: String,
     enum: ["mt", "gt"],
     default: "gt"
+  },
+  visitedAt: {
+    type: Date
   },
   orders: [ordersSchema]
 }, { timestamps: true });

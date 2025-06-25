@@ -195,8 +195,13 @@ const createOrder = async (req, res) => {
       if (shopExists.orders.length > 3) {
         shopExists.orders.shift()
       }
-      await shopExists.save()
     }
+    // shopExists.visitedAt = new Date(Date.now()).toLocaleDateString("en-IN", {
+    //   timeZone: "Asia/Kolkata",
+    // });
+    shopExists.visitedAt = Date.now()
+    
+    await shopExists.save()
   
     await order.save();
     res.status(201).json({ "message": "Order created successfully" });
@@ -337,6 +342,9 @@ const getOrdersByArea = async (req, res) => {
 
     // Build query
     const query_prev = { areaId, deleted: false, status: {$ne: 'canceled' } };
+    if (req.user.role === "sr"){
+      query_prev.placedBy = req.user.username
+    }
 
     const query = getDateQuery(query_prev, completeData, "")
 

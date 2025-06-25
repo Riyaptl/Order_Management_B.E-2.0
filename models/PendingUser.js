@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const pendingUserSchema = new mongoose.Schema({
   username: String,
   email: { type: String, unique: true },
-  role: {type: String, enum: ["sr", "admin", "distributor", "me"]},
+  role: {type: String, enum: ["sr", "admin", "distributor", "me", "tl"]},
   passwordHash: String,
   otpHash: String,
   otpGeneratedAt: Date,

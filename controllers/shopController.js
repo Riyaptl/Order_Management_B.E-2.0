@@ -93,11 +93,22 @@ const blacklistShop = async (req, res) => {
 // 4. Get shops under a specific area
 const getShopsByArea = async (req, res) => {
   try {
-    const { areaId, activity, type } = req.body;
+    const { areaId, activity, type, allShops=false } = req.body;
+    
     let query = {area: areaId, deleted: { $in: [false, null] }}
+    
+    if (!allShops){
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      query.$or = [
+        {visitedAt: {$exists: false}},
+        {visitedAt: { $lt: twentyFourHoursAgo }}
+      ]
+    }
+
     if (activity){
       query.activity = true
     }
+
     if (type){
       query.type = type
     }
