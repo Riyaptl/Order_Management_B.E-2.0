@@ -199,7 +199,7 @@ const createOrder = async (req, res) => {
     // shopExists.visitedAt = new Date(Date.now()).toLocaleDateString("en-IN", {
     //   timeZone: "Asia/Kolkata",
     // });
-    shopExists.visitedAt = Date.now()
+    shopExists.visitedAt = date
     
     await shopExists.save()
   
