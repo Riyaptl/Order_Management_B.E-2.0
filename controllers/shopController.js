@@ -93,11 +93,11 @@ const blacklistShop = async (req, res) => {
 // 4. Get shops under a specific area
 const getShopsByArea = async (req, res) => {
   try {
-    const { areaId, activity, type, allShops=false } = req.body;
+    const { areaId, activity, type, allShops=false, ordered } = req.body;
     
     let query = {area: areaId, deleted: { $in: [false, null] }}
     
-    if (!allShops){
+    if (!allShops && req.user.role !== "me"){
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
       query.$or = [
         {visitedAt: {$exists: false}},
@@ -113,7 +113,13 @@ const getShopsByArea = async (req, res) => {
       query.type = type
     }
 
+    if (ordered) {
+       query["orders.0"] = { $exists: true };
+    }
+
+    
     const areaShops = await Shop.find(query).sort({createdAt: -1})
+
     if (!areaShops) return res.status(404).json("Shops not found");
 
     res.status(200).json({
@@ -122,6 +128,7 @@ const getShopsByArea = async (req, res) => {
 
    
   } catch (error) {
+
     res.status(500).json(error.message);
   }
 };
