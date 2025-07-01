@@ -81,7 +81,9 @@ const getAllAreas = async (req, res) => {
     if (dist_username){
       query["distributor"] = dist_username
     }
+
     const areas = await Area.find(query, 'name'); 
+
     res.status(200).json(areas);
   } catch (error) {
     res.status(500).json(error.message);
