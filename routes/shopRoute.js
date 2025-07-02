@@ -12,7 +12,8 @@ const {
   shiftArea,
   csvImportShop,
   updateShopAreaNames,
-  blacklistShop
+  blacklistShop,
+  surveyShop
 } = require("../controllers/shopController");
 const authenticateUser = require("../middlewares/JwtAuth");
 const checkRole = require("../middlewares/RoleAuth");
@@ -30,6 +31,7 @@ router.post("/", authenticateUser, createShop);
 router.post("/:id", authenticateUser, updateShop);
 router.post("/delete/one", authenticateUser, deleteShop);
 router.post("/blacklist/one", authenticateUser, checkRole("admin", "sr", "distributor", "tl"), blacklistShop);
+router.post("/survey", authenticateUser, checkRole("admin", "me"), surveyShop);
 router.post("/shift/area", authenticateUser, checkRole('admin', 'sr', "tl"), shiftArea);
 
 // Public or protected read

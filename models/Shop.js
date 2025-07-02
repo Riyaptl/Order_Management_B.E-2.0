@@ -144,6 +144,9 @@ const ShopSchema = new mongoose.Schema({
   visitedAt: {
     type: Date
   },
+  survey: [{
+    type: String
+  }],
   orders: [ordersSchema]
 }, { timestamps: true });
 

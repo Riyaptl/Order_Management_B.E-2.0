@@ -90,6 +90,41 @@ const blacklistShop = async (req, res) => {
   }
 };
 
+// Survey Shop
+const surveyShop = async (req, res) => {
+  try {
+    const { ids } = req.body; 
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: "No shop IDs provided" });
+    }
+
+    // Format current date as dd/mm/yyyy
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    const formattedDate = `${day}/${month}/${year}`;
+
+    // Fetch all shops
+    const shops = await Shop.find({ 
+      _id: { $in: ids },
+      deleted: { $in: [false, null] }
+    });
+
+    for (let shop of shops) {
+      if (!shop.survey) shop.survey = [];
+      shop.survey.push(formattedDate);
+      await shop.save();
+    }
+
+    res.status(200).json({ message: `${shops.length} shops updated successfully.` });
+  } catch (error) {
+    console.error("Survey shop error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
 // 4. Get shops under a specific area
 const getShopsByArea = async (req, res) => {
   try {
@@ -326,5 +361,6 @@ module.exports = {
   csvImportShop,
   getShopOrders,
   updateShopAreaNames,
-  blacklistShop
+  blacklistShop,
+  surveyShop
 };
