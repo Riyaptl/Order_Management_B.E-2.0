@@ -10,9 +10,9 @@ const csv = require('csv-parser');
 // 1. Create Shop
 const createShop = async (req, res) => {
   try {
-    const { name, address, contactNumber, addressLink, areaId, activity, type } = req.body;
+    const { name, handler, address, contactNumber, addressLink, areaId, activity, type } = req.body;
   
-    const shop = new Shop({ name, address, contactNumber, addressLink, createdBy: req.user.username, activity, type});
+    const shop = new Shop({ name, handler, address, contactNumber, addressLink, createdBy: req.user.username, activity, type});
     const area = await Area.findOneAndUpdate({_id: areaId, deleted: { $in: [false, null] }}, { $push: { shops: shop._id } }, {new: true});
     if (!area) return res.status(404).json("Area not found");
 
@@ -31,7 +31,7 @@ const updateShop = async (req, res) => {
     const { id } = req.params;
     const updates = {};
 
-    const allowedFields = ["name", "address", "contactNumber", "addressLink", "activity", "type"];
+    const allowedFields = ["name", "address", "contactNumber", "addressLink", "activity", "type", "handler"];
     allowedFields.forEach((field) => {
       if (req.body[field] !== undefined) {
         updates[field] = req.body[field];
@@ -93,18 +93,10 @@ const blacklistShop = async (req, res) => {
 // Survey Shop
 const surveyShop = async (req, res) => {
   try {
-    const { ids } = req.body; 
+    const { ids, formattedDate } = req.body; 
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ message: "No shop IDs provided" });
     }
-
-    // Format current date as dd/mm/yyyy
-    const now = new Date();
-    const day = String(now.getDate()).padStart(2, '0');
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const year = now.getFullYear();
-    const formattedDate = `${day}/${month}/${year}`;
-
     // Fetch all shops
     const shops = await Shop.find({ 
       _id: { $in: ids },
@@ -119,7 +111,32 @@ const surveyShop = async (req, res) => {
 
     res.status(200).json({ message: `${shops.length} shops updated successfully.` });
   } catch (error) {
-    console.error("Survey shop error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Activity performed Shop
+const activityPerformedShop = async (req, res) => {
+  try {
+    const { ids, formattedDate } = req.body; 
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: "No shop IDs provided" });
+    }
+
+    // Fetch all shops
+    const shops = await Shop.find({ 
+      _id: { $in: ids },
+      deleted: { $in: [false, null] }
+    });
+
+    for (let shop of shops) {
+      if (!shop.activityPerformedAt) shop.activityPerformedAt = [];
+      shop.activityPerformedAt.push(formattedDate);
+      await shop.save();
+    }
+
+    res.status(200).json({ message: `${shops.length} shops updated successfully.` });
+  } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
@@ -362,5 +379,6 @@ module.exports = {
   getShopOrders,
   updateShopAreaNames,
   blacklistShop,
-  surveyShop
+  surveyShop,
+  activityPerformedShop
 };

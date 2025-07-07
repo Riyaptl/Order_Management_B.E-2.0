@@ -76,6 +76,9 @@ const ShopSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  handler: {
+    type: String,
+  },
   address: {
     type: String,
   },
@@ -145,6 +148,9 @@ const ShopSchema = new mongoose.Schema({
     type: Date
   },
   survey: [{
+    type: String
+  }],
+  activityPerformedAt: [{
     type: String
   }],
   orders: [ordersSchema]
