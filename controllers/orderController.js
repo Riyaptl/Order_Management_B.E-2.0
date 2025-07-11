@@ -342,7 +342,7 @@ const paginatedOrders = async (page, limit, query) => {
     const skip = (pageNum - 1) * limitNum;
 
     const orders = await Order.find(query)
-      .populate("shopId", "name address contactNumber addressLink areaName")
+      .populate("shopId", "name address contactNumber addressLink areaName repeat first blacklisted")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNum);
