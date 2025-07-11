@@ -275,7 +275,7 @@ const statusOrder = async (req, res) => {
 };
 
 // date query
-const getDateQuery = (query, completeData, date="") => {
+const getDateQuery = (query, completeData, date="", month) => {
   try {
     if (!completeData && !date) {
 
@@ -300,6 +300,26 @@ const getDateQuery = (query, completeData, date="") => {
       const istEndofDay = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999) - istOffsetMs);
       query.createdAt = { $gte: istStartofDay, $lte: istEndofDay };
     } 
+
+    // set month passed
+    if (month){
+      const now = new Date();
+      const year = now.getFullYear();
+
+      // Step 2: Convert month name (e.g., "June") to month number (0-indexed)
+      const monthIndex = new Date(`${month} 1, ${year}`).getMonth();
+
+      // Step 3: Build IST start and end of month
+      const startIST = new Date(year, monthIndex, 1, 0, 0, 0, 0);
+      const endIST = new Date(year, monthIndex + 1, 0, 23, 59, 59, 999);
+
+      // Step 4: Convert to UTC
+      const startUTC = new Date(startIST.getTime() );
+      const endUTC = new Date(endIST.getTime());
+      query.createdAt = { $gte: startUTC, $lte: endUTC };
+    }
+    
+
     return query
     
   } catch (error) {
@@ -334,10 +354,14 @@ const paginatedOrders = async (page, limit, query) => {
 // orders  by area
 const getOrdersByArea = async (req, res) => {
   try {
-    const { areaId, completeData = false, page = 1, limit = 20, placedOrders } = req.body;
+    const { areaId, completeData = false, page = 1, limit = 20, placedOrders, month } = req.body;
 
     if (!areaId) {
       return res.status(400).json({ message: "Area parameter is required" });
+    }
+
+    if (completeData && month){
+      return res.status(404).jaon({message: "Invalid Entry"})
     }
 
     // Build query
@@ -346,7 +370,7 @@ const getOrdersByArea = async (req, res) => {
       query_prev.placedBy = req.user.username
     }
 
-    const query = getDateQuery(query_prev, completeData, "")
+    const query = getDateQuery(query_prev, completeData, "", month)
 
     if (placedOrders) {
       query["products"] = { $ne: {} };
@@ -371,15 +395,20 @@ const getOrdersByArea = async (req, res) => {
 // 2. get orders- placed by
 const getOrdersBySR = async (req, res) => {
   try {
-    const { username, completeData = false, page = 1, limit = 60, placedOrders } = req.body;
+    const { username, completeData = false, page = 1, limit = 60, placedOrders, month } = req.body;
     
     if (!username) {
       return res.status(404).json("SR name is required");
     }
+
+    if (completeData && month){
+      return res.status(404).jaon({message: "Invalid Entry"})
+    }
+
     // Build query
     const query_prev = { placedBy: username, deleted: false, status: {$ne: "canceled"} };
 
-    const query = getDateQuery(query_prev, completeData, "")
+    const query = getDateQuery(query_prev, completeData, "", month)
 
     if (placedOrders) {
       query["products"] = { $ne: {} };
@@ -407,14 +436,14 @@ const getOrdersByDate = async (req, res) => {
   try {
   
     const { username, page = 1, limit = 60, placedOrders, date, dist="" } = req.body;
-  
+
     // Build query
     const query_prev = { deleted: false, status: {$ne: "canceled"} };
     if (username) {
       query_prev.placedBy = username
     }
 
-    const query = getDateQuery(query_prev, false, date)
+    const query = getDateQuery(query_prev, false, date, "")
 
     if (placedOrders) {
       query["products"] = { $ne: {} };
@@ -467,9 +496,9 @@ const getRevokedOrders = async (req, res) => {
 
     let query
     if (date) {
-      query = getDateQuery(query_prev, false, date)
+      query = getDateQuery(query_prev, false, date, "")
     } else {
-      query = getDateQuery(query_prev, true, "")
+      query = getDateQuery(query_prev, true, "", "")
 
     }
     
@@ -554,26 +583,8 @@ const buildReportQuery = async (dist_username, placed_username, completeData, da
     }
 
     // Date query
-    const query = await getDateQuery(query_prev, completeData, date)
+    const query = await getDateQuery(query_prev, completeData, date, month)
 
-    // set month passed
-    if (month){
-      const istOffsetMs = 5.5 * 60 * 60 * 1000;
-      const now = new Date();
-      const year = now.getFullYear();
-
-      // Step 2: Convert month name (e.g., "June") to month number (0-indexed)
-      const monthIndex = new Date(`${month} 1, ${year}`).getMonth();
-
-      // Step 3: Build IST start and end of month
-      const startIST = new Date(year, monthIndex, 1, 0, 0, 0, 0);
-      const endIST = new Date(year, monthIndex + 1, 0, 23, 59, 59, 999);
-
-      // Step 4: Convert to UTC
-      const startUTC = new Date(startIST.getTime() - istOffsetMs);
-      const endUTC = new Date(endIST.getTime() - istOffsetMs);
-      query.createdAt = { $gte: startUTC, $lte: endUTC };
-    }
     return query
   } catch (error) {
     return error
@@ -583,7 +594,7 @@ const buildReportQuery = async (dist_username, placed_username, completeData, da
 // get orders for sales report
 const getSalesReport = async (req, res) => {
   try {
-    const { dist_username, completeData=false, placed_username, date, month } = req.body;
+    const { dist_username, completeData=false, placed_username, date, month, areaId } = req.body;
 
     if (completeData && date) {
       return res.status(404).jaon({message: "Invalid Entry"})
@@ -594,6 +605,10 @@ const getSalesReport = async (req, res) => {
     }
 
     const query = await buildReportQuery(dist_username, placed_username, completeData, date, month)
+
+    if (areaId){
+      query.areaId = areaId
+    }
 
     // For Order type
     const order_query = {...query, type: "order", status: {$ne: 'canceled'}}
