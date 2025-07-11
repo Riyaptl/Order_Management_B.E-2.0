@@ -153,6 +153,14 @@ const ShopSchema = new mongoose.Schema({
   activityPerformedAt: [{
     type: String
   }],
+  first: {
+    type: Boolean,
+    default: false
+  },
+  repeat: {
+    type: Boolean,
+    default: false
+  },
   orders: [ordersSchema]
 }, { timestamps: true });
 

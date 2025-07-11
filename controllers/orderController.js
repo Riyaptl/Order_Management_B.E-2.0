@@ -200,6 +200,12 @@ const createOrder = async (req, res) => {
     //   timeZone: "Asia/Kolkata",
     // });
     shopExists.visitedAt = date
+    if (shopExists.first){
+      shopExists.repeat = true
+      shopExists.first = false
+    }else if (!shopExists.first && !shopExists.repeat){
+      shopExists.first = true
+    }
     
     await shopExists.save()
   
