@@ -42,8 +42,8 @@ const dailyReport = async (req, res) => {
 
     const orders = await Order.find(query);
 
-    const orderKeys = ["Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g"];
-    const keysToReport = ["Ordered Regular 50g", "Ordered Coffee 50g", "Ordered Regular 25g", "Ordered Coffee 25g", "Cancelled Regular 50g", "Cancelled Coffee 50g", "Cancelled Regular 25g", "Cancelled Coffee 25g", "Gift box"];
+    const orderKeys = ["Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g", "Gift box"];
+    const keysToReport = ["Ordered Regular 50g", "Ordered Coffee 50g", "Ordered Regular 25g", "Ordered Coffee 25g", "Ordered Gift box", "Cancelled Regular 50g", "Cancelled Coffee 50g", "Cancelled Regular 25g", "Cancelled Coffee 25g", "Cancelled Gift box"];
     const dailySummary = {};
 
     orders.forEach(order => {
@@ -159,7 +159,8 @@ const createOrder = async (req, res) => {
         "Regular 50g": ["Cranberry 50g", "Dryfruits 50g", "Peanuts 50g", "Mix seeds 50g"],
         "Coffee 50g": ["Classic Coffee 50g", "Dark Coffee 50g", "Intense Coffee 50g", "Toxic Coffee 50g"],
         "Regular 25g": ["Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g", "Orange 25g", "Mint 25g"],
-        "Coffee 25g": ["Classic Coffee 25g", "Dark Coffee 25g", "Intense Coffee 25g", "Toxic Coffee 25g"]
+        "Coffee 25g": ["Classic Coffee 25g", "Dark Coffee 25g", "Intense Coffee 25g", "Toxic Coffee 25g"],
+        "Gift box": ["Gift box"]
       };
 
       // Calculate total object
@@ -167,7 +168,8 @@ const createOrder = async (req, res) => {
         "Regular 50g": 0,
         "Coffee 50g": 0,
         "Regular 25g": 0,
-        "Coffee 25g": 0
+        "Coffee 25g": 0,
+        "Gift box": 0
       };
 
       // Loop through each category and sum up matching product quantities
@@ -209,8 +211,7 @@ const createOrder = async (req, res) => {
       }
     }
     
-    await shopExists.save()
-  
+    await shopExists.save()    
     await order.save();
     res.status(201).json({ "message": "Order created successfully" });
   } catch (error) {
@@ -536,7 +537,7 @@ const getReport = async (orders) => {
       "Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g", "Gift box"
     ];
 
-    const amountTotal = [40, 50, 27, 30] // PRICE
+    const amountTotal = [40, 50, 27, 30, 178] // PRICE
     const productTotals = {};
     const overallTotals = {};
 
