@@ -5,11 +5,11 @@ const productList = [
   "Classic Coffee 50g", "Dark Coffee 50g", "Intense Coffee 50g", "Toxic Coffee 50g",
   "Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g",
   "Orange 25g", "Mint 25g", "Classic Coffee 25g", "Dark Coffee 25g",
-  "Intense Coffee 25g", "Toxic Coffee 25g", "box of 4"
+  "Intense Coffee 25g", "Toxic Coffee 25g", "Gift box"
 ];
 
 const totalList = [
-  "Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g", "box of 4"
+  "Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g", "Gift box"
 ];
 
 
