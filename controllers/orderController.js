@@ -215,6 +215,8 @@ const createOrder = async (req, res) => {
     await order.save();
     res.status(201).json({ "message": "Order created successfully" });
   } catch (error) {
+    console.log(error);
+    
     res.status(500).json(error.message);
   }
 };
@@ -237,11 +239,33 @@ const softDeleteOrder = async (req, res) => {
     shopExists.orders = shopExists.orders.filter(
       (o) => o.orderId.toString() !== order._id.toString()
     );
-    await shopExists.save()
     await order.save();
+
+    const ordersCnt = await Order.find({
+        deleted: false,
+        location: {
+          $exists: false
+        },
+        status: {
+          $ne: "canceled"
+        },
+        type: "order",
+        shopId: shopExists._id
+      }).countDocuments()
+  
+    if (ordersCnt === 0){
+      shopExists.first = false
+      shopExists.repeat = false
+    }else if (ordersCnt === 1){
+      shopExists.first = true
+      shopExists.repeat = false
+    }
+    await shopExists.save()
 
     res.status(200).json("Order deleted successfully");
   } catch (error) {
+    console.log(error);
+    
     res.status(500).json(error.message);
   }
 };
@@ -264,6 +288,7 @@ const statusOrder = async (req, res) => {
       
       // update in shop order history
       const shopExists = await Shop.findOne({_id: order.shopId})
+      if (!shopExists) return
       const targetOrder = shopExists.orders.find(
         (o) => o.orderId.toString() === order._id.toString()
       );
