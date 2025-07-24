@@ -654,7 +654,12 @@ const getSalesReport = async (req, res) => {
     const replacement_orders = await Order.find(replcement_query, { products: 1, total: 1 })
     const saleReplaceReport = await getReport(replacement_orders)
     
-    res.status(200).json({ saleReport, saleReplaceReport });
+    // For return type
+    const return_query = {...query, type: "return", status: {$ne: 'canceled'}}
+    const return_orders = await Order.find(return_query, { products: 1, total: 1 })
+    const saleReturnReport = await getReport(return_orders)
+    
+    res.status(200).json({ saleReport, saleReplaceReport, saleReturnReport });
   } catch (error) {
     res.status(500).json(error.message);
   }
@@ -685,7 +690,12 @@ const getCancelledReport = async (req, res) => {
     const replacement_orders = await Order.find(replcement_query, { products: 1, total: 1 })
     const cancelledReplaceReport = await getReport(replacement_orders)
     
-    res.status(200).json({ cancelledReport, cancelledReplaceReport });
+    // For return type
+    const return_query = {...query, type: "return", status: 'canceled'}
+    const return_orders = await Order.find(return_query, { products: 1, total: 1 })
+    const cancelledReturnReport = await getReport(return_orders)
+    
+    res.status(200).json({ cancelledReport, cancelledReplaceReport, cancelledReturnReport });
 
   } catch (error) {
     res.status(500).json(error.message);

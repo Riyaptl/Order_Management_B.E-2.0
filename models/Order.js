@@ -56,7 +56,7 @@ const orderSchema = new mongoose.Schema({
   },
   paymentTerms: {
     type: String,
-    enum: ["cash", "company credit", "sr credit", "distributor credit", ""]
+    enum: ["cash", "cheque", "company credit", "sr credit", "distributor credit", ""]
   },
   remarks: {
     type: String
@@ -94,7 +94,7 @@ const orderSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ["order", "replacement"],
+    enum: ["order", "replacement", "return"],
     default: "order"
   },
   createdAt: {

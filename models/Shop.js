@@ -39,7 +39,7 @@ const ordersSchema = new mongoose.Schema({
   },
   paymentTerms: {
     type: String,
-    enum: ["cash", "company credit", "sr credit", "distributor credit", ""]
+    enum: ["cash", "cheque", "company credit", "sr credit", "distributor credit", ""]
   },
   placedBy: {
     type: String,
@@ -66,7 +66,7 @@ const ordersSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ["order", "replacement"],
+    enum: ["order", "replacement", "return"],
     default: "order"
   },
 }, { _id: false }); 
