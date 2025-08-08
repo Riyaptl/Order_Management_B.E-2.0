@@ -13,7 +13,8 @@ const getSRDetails = async (req, res) => {
 
 const getAllSRs = async (req, res) => {
   try {
-    const srs = await User.find({ role: {$in : ["sr", "tl"] } }).select("_id username");
+    const query = { role: {$in : ["sr", "tl"] }, active: true }
+    const srs = await User.find(query).select("_id username");
     res.status(200).json(srs);
   } catch (error) {
     res.status(500).json(error.message);

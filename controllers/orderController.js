@@ -2,6 +2,7 @@
 const Order = require("../models/Order");
 const Area = require("../models/Area");
 const Shop = require("../models/Shop");
+const User = require("../models/User");
 const { Parser } = require("json2csv");
 
 const productList = [
@@ -33,11 +34,18 @@ const dailyReport = async (req, res) => {
 
     // Build Query
     const query = {
-      placedBy: username,
       products: { $ne: {} },
       createdAt: { $gte: startOfMonth, $lte: endOfDay },
       deleted: false,
       type: "order"
+    }
+
+    if (username !== "old"){
+      query.placedBy = username
+    }else{
+      const users = await User.find({role: {$in : ["sr", "tl"] }, active: true}, {username: 1})
+      console.log(users)
+      
     }
 
     const orders = await Order.find(query);
@@ -440,7 +448,16 @@ const getOrdersBySR = async (req, res) => {
     }
 
     // Build query
-    const query_prev = { placedBy: username, deleted: false, status: {$ne: "canceled"} };
+    const query_prev = { deleted: false, status: {$ne: "canceled"} };
+
+    if (username !== "old"){
+      query_prev.placedBy = username
+    }else{
+      const usersData = await User.find({role: {$in : ["sr", "tl"] }, active: false}, {username: 1, _id:0})
+      const users = []
+      usersData.map(obj => users.push(obj.username))
+      query_prev.placedBy = {$in: users}
+    }
 
     const query = getDateQuery(query_prev, completeData, "", month)
 
@@ -474,7 +491,14 @@ const getOrdersByDate = async (req, res) => {
     // Build query
     const query_prev = { deleted: false, status: {$ne: "canceled"} };
     if (username) {
-      query_prev.placedBy = username
+      if (username !== "old"){
+        query_prev.placedBy = username
+      }else{
+        const usersData = await User.find({role: {$in : ["sr", "tl"] }, active: false}, {username: 1, _id:0})
+        const users = []
+        usersData.map(obj => users.push(obj.username))
+        query_prev.placedBy = {$in: users}
+      }
     }
 
     const query = getDateQuery(query_prev, false, date, "")
@@ -520,7 +544,14 @@ const getRevokedOrders = async (req, res) => {
     }
 
     if (!completeData) {
-      query_prev.placedBy = username
+      if (username !== "old"){
+        query_prev.placedBy = username
+      }else{
+        const usersData = await User.find({role: {$in : ["sr", "tl"] }, active: false}, {username: 1, _id:0})
+        const users = []
+        usersData.map(obj => users.push(obj.username))
+        query_prev.placedBy = {$in: users}
+      }
     }
 
     if (dist_username) {
@@ -599,7 +630,6 @@ const getReport = async (orders) => {
     return error
   }
 }
-
 
 const buildReportQuery = async (dist_username, placed_username, completeData, date, month) => {
   try {
