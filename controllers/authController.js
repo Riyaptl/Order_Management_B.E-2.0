@@ -22,40 +22,40 @@ const loginAuth = async (req, res) => {
         const usernameTrimmed = username.trim();
         const user = await User.login({ username: usernameTrimmed, password });
         const token = generateToken(user);
-        const isLoggedIn = user.active
+        // const isLoggedIn = user.active
 
-        // Convert current time to IST
-        const nowIST = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
-        const istDate = new Date(nowIST); 
-        const todayIST = istDate.toISOString().slice(0, 10); 
+        // // Convert current time to IST
+        // const nowIST = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+        // const istDate = new Date(nowIST); 
+        // const todayIST = istDate.toISOString().slice(0, 10); 
 
-        let attendance = await Attendance.findOne({ username: user.username, date: todayIST });
-        const loginEntry = {
-            time: nowIST,
-            location: {
-                latitude: loginLoc.latitude,
-                longitude: loginLoc.longitude
-            }
-        };
+        // let attendance = await Attendance.findOne({ username: user.username, date: todayIST });
+        // const loginEntry = {
+        //     time: nowIST,
+        //     location: {
+        //         latitude: loginLoc.latitude,
+        //         longitude: loginLoc.longitude
+        //     }
+        // };
 
-        if (!attendance) {
-          attendance = new Attendance({
-            username: user.username,
-            date: todayIST,
-            loginLoc,
-            loginAt: [loginEntry],
-            logoutAt: []
-          });
-        } else {
-          attendance.loginAt.push(loginEntry);
-        }
+        // if (!attendance) {
+        //   attendance = new Attendance({
+        //     username: user.username,
+        //     date: todayIST,
+        //     loginLoc,
+        //     loginAt: [loginEntry],
+        //     logoutAt: []
+        //   });
+        // } else {
+        //   attendance.loginAt.push(loginEntry);
+        // }
 
-        if (isLoggedIn){
-          attendance.logoutAt.push(loginEntry)
-        }
+        // if (isLoggedIn){
+        //   attendance.logoutAt.push(loginEntry)
+        // }
                 
-        await attendance.save();
-        user.active = true
+        // await attendance.save();
+        // user.active = true
         await user.save()
 
         res.status(200).json({
@@ -226,50 +226,50 @@ const resetPassword = async (req, res) => {
   }
 };
 
-const logoutAuth = async (req, res) => {
+// const logoutAuth = async (req, res) => {
   
-  const { username, logoutLoc } = req.body;
+//   const { username, logoutLoc } = req.body;
   
-    try {
-        const usernameTrimmed = username.trim();
-        const user = await User.findOne({ username: usernameTrimmed });
-        if (!user) return res.status(404).json("User not found");
+//     try {
+//         const usernameTrimmed = username.trim();
+//         const user = await User.findOne({ username: usernameTrimmed });
+//         if (!user) return res.status(404).json("User not found");
 
-        // Convert current time to IST
-        const nowIST = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
-        const istDate = new Date(nowIST); 
-        const todayIST = istDate.toISOString().slice(0, 10); 
+//         // Convert current time to IST
+//         const nowIST = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+//         const istDate = new Date(nowIST); 
+//         const todayIST = istDate.toISOString().slice(0, 10); 
         
-        let attendance = await Attendance.findOne({ username, date: todayIST });
-        const logoutEntry = {
-            time: nowIST,
-            location: {
-                latitude: logoutLoc.latitude,
-                longitude: logoutLoc.longitude
-            }
-        };
-        if (!attendance) {
-            attendance = new Attendance({
-                username: user.username,
-                date: todayIST,
-                loginAt: [],
-                logoutAt: [logoutEntry]
-            });
-        } else {
-            attendance.logoutAt.push(logoutEntry);
-        }
+//         let attendance = await Attendance.findOne({ username, date: todayIST });
+//         const logoutEntry = {
+//             time: nowIST,
+//             location: {
+//                 latitude: logoutLoc.latitude,
+//                 longitude: logoutLoc.longitude
+//             }
+//         };
+//         if (!attendance) {
+//             attendance = new Attendance({
+//                 username: user.username,
+//                 date: todayIST,
+//                 loginAt: [],
+//                 logoutAt: [logoutEntry]
+//             });
+//         } else {
+//             attendance.logoutAt.push(logoutEntry);
+//         }
       
-        await attendance.save();
+//         await attendance.save();
 
-        user.active = false
-        await user.save()
-        res.status(200).json({
-            "message": "User Logged Out Successfully"
-        });
+//         user.active = false
+//         await user.save()
+//         res.status(200).json({
+//             "message": "User Logged Out Successfully"
+//         });
 
-    } catch (error) {
-        res.status(400).json(error.message);
-    }
-};
+//     } catch (error) {
+//         res.status(400).json(error.message);
+//     }
+// };
 
-module.exports = {loginAuth, sendOTP, verifyOTP, forgotPassword, resetPassword, logoutAuth}
+module.exports = {loginAuth, sendOTP, verifyOTP, forgotPassword, resetPassword}

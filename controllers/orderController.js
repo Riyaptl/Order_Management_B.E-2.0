@@ -10,11 +10,13 @@ const productList = [
   "Classic Coffee 50g", "Dark Coffee 50g", "Intense Coffee 50g", "Toxic Coffee 50g",
   "Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g",
   "Orange 25g", "Mint 25g", "Classic Coffee 25g", "Dark Coffee 25g",
-  "Intense Coffee 25g", "Toxic Coffee 25g", "Gift box"
+  "Intense Coffee 25g", "Toxic Coffee 25g", "Gift box",
+  "Hazelnut & Blueberries", "Roasted Almonds & Pink Salt", "Kiwi & Pineapple", "Ginger & Cinnamon", "Pistachio & Black Raisin", "Dates & Raisin"
 ];
 
 const totalList = [
-  "Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g", "Gift box"
+  "Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g", "Gift box",
+  "Hazelnut & Blueberries", "Roasted Almonds & Pink Salt", "Kiwi & Pineapple", "Ginger & Cinnamon", "Pistachio & Black Raisin", "Dates & Raisin"
 ];
 
 
@@ -25,7 +27,7 @@ const dailyReport = async (req, res) => {
     if (!username) return res.status(400).json({ message: "Username is required" });
 
     const nowIST = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
-    const startOfMonth = new Date(nowIST); 
+    const startOfMonth = new Date(nowIST);
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
@@ -40,18 +42,19 @@ const dailyReport = async (req, res) => {
       type: "order"
     }
 
-    if (username !== "old"){
+    if (username !== "old") {
       query.placedBy = username
-    }else{
-      const users = await User.find({role: {$in : ["sr", "tl"] }, active: true}, {username: 1})
-      console.log(users)
-      
+    } else {
+      const users = await User.find({ role: { $in: ["sr", "tl"] }, active: true }, { username: 1 })
     }
 
     const orders = await Order.find(query);
 
-    const orderKeys = ["Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g", "Gift box"];
-    const keysToReport = ["Ordered Regular 50g", "Ordered Coffee 50g", "Ordered Regular 25g", "Ordered Coffee 25g", "Ordered Gift box", "Cancelled Regular 50g", "Cancelled Coffee 50g", "Cancelled Regular 25g", "Cancelled Coffee 25g", "Cancelled Gift box"];
+    const orderKeys = ["Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g", "Gift box", "Hazelnut & Blueberries", "Roasted Almonds & Pink Salt", "Kiwi & Pineapple", "Ginger & Cinnamon", "Pistachio & Black Raisin", "Dates & Raisin"];
+    const prefixes = ["Ordered", "Cancelled"];
+    const keysToReport = orderKeys.flatMap(key =>
+      prefixes.map(prefix => `${prefix} ${key}`)
+    );
     const dailySummary = {};
 
     orders.forEach(order => {
@@ -75,7 +78,7 @@ const dailyReport = async (req, res) => {
           dailySummary[dateKey][orderKey] += qty;
         }
       });
-      });
+    });
 
     // Convert object to array sorted by date
     const reportList = Object.values(dailySummary).sort((a, b) =>
@@ -94,7 +97,7 @@ const dailyCallsReport = async (req, res) => {
     if (!username) return res.status(400).json({ message: "Username is required" });
 
     const nowIST = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
-    const startOfMonth = new Date(nowIST); 
+    const startOfMonth = new Date(nowIST);
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
@@ -106,7 +109,7 @@ const dailyCallsReport = async (req, res) => {
       placedBy: username,
       createdAt: { $gte: startOfMonth, $lte: endOfDay },
       deleted: false,
-      status: {$ne: "canceled"},
+      status: { $ne: "canceled" },
       type: "order"
     }
 
@@ -115,7 +118,7 @@ const dailyCallsReport = async (req, res) => {
 
     orders.forEach(order => {
       const dateKey = new Date(order.createdAt).toISOString().split('T')[0];
-      
+
       if (!dailySummary[dateKey]) {
         dailySummary[dateKey] = {
           date: dateKey,
@@ -123,12 +126,12 @@ const dailyCallsReport = async (req, res) => {
           tc: 0,
         };
       }
-      
-      const isEmpty =
-    !(order.products instanceof Map) ||
-    [...order.products.values()].filter((qty) => qty > 0).length === 0;
 
-    if (!isEmpty) {
+      const isEmpty =
+        !(order.products instanceof Map) ||
+        [...order.products.values()].filter((qty) => qty > 0).length === 0;
+
+      if (!isEmpty) {
         dailySummary[dateKey].pc += 1;
       }
       dailySummary[dateKey].tc += 1;
@@ -147,7 +150,7 @@ const dailyCallsReport = async (req, res) => {
 // 1. Create Order
 const createOrder = async (req, res) => {
   try {
-    const { shopId, areaId, products, placedBy, location, paymentTerms, remarks, orderPlacedBy, type="order", date } = req.body;
+    const { shopId, areaId, products, placedBy, location, paymentTerms, remarks, orderPlacedBy, type = "order", date } = req.body;
 
     const createdBy = req.user.username;
     const finalPlacedBy = placedBy || createdBy
@@ -168,7 +171,13 @@ const createOrder = async (req, res) => {
         "Coffee 50g": ["Classic Coffee 50g", "Dark Coffee 50g", "Intense Coffee 50g", "Toxic Coffee 50g"],
         "Regular 25g": ["Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g", "Orange 25g", "Mint 25g"],
         "Coffee 25g": ["Classic Coffee 25g", "Dark Coffee 25g", "Intense Coffee 25g", "Toxic Coffee 25g"],
-        "Gift box": ["Gift box"]
+        "Gift box": ["Gift box"],
+        "Hazelnut & Blueberries": ["Hazelnut & Blueberries"],
+        "Roasted Almonds & Pink Salt": ["Roasted Almonds & Pink Salt"],
+        "Kiwi & Pineapple": ["Kiwi & Pineapple"],
+        "Ginger & Cinnamon": ["Ginger & Cinnamon"],
+        "Pistachio & Black Raisin": ["Pistachio & Black Raisin"],
+        "Dates & Raisin": ["Dates & Raisin"]
       };
 
       // Calculate total object
@@ -177,7 +186,13 @@ const createOrder = async (req, res) => {
         "Coffee 50g": 0,
         "Regular 25g": 0,
         "Coffee 25g": 0,
-        "Gift box": 0
+        "Gift box": 0,
+        "Hazelnut & Blueberries": 0,
+        "Roasted Almonds & Pink Salt": 0,
+        "Kiwi & Pineapple": 0,
+        "Ginger & Cinnamon": 0,
+        "Pistachio & Black Raisin": 0,
+        "Dates & Raisin": 0
       };
 
       // Loop through each category and sum up matching product quantities
@@ -210,21 +225,19 @@ const createOrder = async (req, res) => {
     //   timeZone: "Asia/Kolkata",
     // });
     shopExists.visitedAt = date
-    if (type === "order" && !location){
-      if (shopExists.first){
+    if (type === "order" && !location) {
+      if (shopExists.first) {
         shopExists.repeat = true
         shopExists.first = false
-      }else if (!shopExists.first && !shopExists.repeat){
+      } else if (!shopExists.first && !shopExists.repeat) {
         shopExists.first = true
       }
     }
-    
-    await shopExists.save()    
+
+    await shopExists.save()
     await order.save();
     res.status(201).json({ "message": "Order created successfully" });
   } catch (error) {
-    console.log(error);
-    
     res.status(500).json(error.message);
   }
 };
@@ -235,7 +248,7 @@ const softDeleteOrder = async (req, res) => {
     const { id } = req.params;
     const deletedBy = req.user.username;
 
-    const order = await Order.findOne({_id: id, deleted: false});    
+    const order = await Order.findOne({ _id: id, deleted: false });
     if (!order || order.deleted) return res.status(404).json("Order not found or already deleted");
 
     order.deleted = true;
@@ -243,28 +256,28 @@ const softDeleteOrder = async (req, res) => {
     order.deletedAt = new Date();
 
     // remove from shop orders history
-    const shopExists = await Shop.findOne({_id: order.shopId})
+    const shopExists = await Shop.findOne({ _id: order.shopId })
     shopExists.orders = shopExists.orders.filter(
       (o) => o.orderId.toString() !== order._id.toString()
     );
     await order.save();
 
     const ordersCnt = await Order.find({
-        deleted: false,
-        location: {
-          $exists: false
-        },
-        status: {
-          $ne: "canceled"
-        },
-        type: "order",
-        shopId: shopExists._id
-      }).countDocuments()
-  
-    if (ordersCnt === 0){
+      deleted: false,
+      location: {
+        $exists: false
+      },
+      status: {
+        $ne: "canceled"
+      },
+      type: "order",
+      shopId: shopExists._id
+    }).countDocuments()
+
+    if (ordersCnt === 0) {
       shopExists.first = false
       shopExists.repeat = false
-    }else if (ordersCnt === 1){
+    } else if (ordersCnt === 1) {
       shopExists.first = true
       shopExists.repeat = false
     }
@@ -272,8 +285,6 @@ const softDeleteOrder = async (req, res) => {
 
     res.status(200).json("Order deleted successfully");
   } catch (error) {
-    console.log(error);
-    
     res.status(500).json(error.message);
   }
 };
@@ -281,43 +292,105 @@ const softDeleteOrder = async (req, res) => {
 // Update Status Order 
 const statusOrder = async (req, res) => {
   try {
-    const { ids, status, reason } = req.body;
+    const { ids, status, reason, returnProducts = {} } = req.body;
 
-    ids.forEach(async (id) => {
-      const order = await Order.findOne({_id: id, deleted: false});
-      if (!order ) return res.status(404).json("Order not found");
-  
-      if (order.status === 'pending') {
+    for (const id of ids) {
+      const order = await Order.findOne({ _id: id, deleted: false });
+      if (!order) return res.status(404).json("Order not found");
+
+      // Only allow update if current status is pending
+      if (order.status === "pending") {
         order.status = status;
       }
-      order.canceledReason = reason   
+
+      order.canceledReason = reason;
       order.statusUpdatedBy = req.user.username;
       order.statusUpdatedAt = Date.now();
-      
-      // update in shop order history
-      const shopExists = await Shop.findOne({_id: order.shopId})
-      if (!shopExists) return
-      const targetOrder = shopExists.orders.find(
-        (o) => o.orderId.toString() === order._id.toString()
-      );
-
-      if (targetOrder) {
-        targetOrder.status = order.status;
-        targetOrder.statusUpdatedAt = order.statusUpdatedAt;
-        targetOrder.canceledReason = order.canceledReason;
-        await shopExists.save()
+      if (status === "partial return" && order.type !== "order") {
+        return
       }
+
+      if (status === "partial return" && returnProducts && Object.keys(returnProducts).length > 0) {
+        // Initialize maps if not present
+        if (!order.return_products) order.return_products = new Map();
+        if (!order.return_total) order.return_total = new Map();
+
+        for (const [product, qty] of Object.entries(returnProducts)) {
+          if (!qty || qty <= 0) continue;
+
+          // --- Deduct from products ---
+          const currentQty = order.products.get(product) || 0;
+          const newQty = Math.max(currentQty - qty, 0);
+          order.products.set(product, newQty);
+
+          // --- Add to return_products ---
+          const currentReturnQty = order.return_products.get(product) || 0;
+          order.return_products.set(product, currentReturnQty + qty);
+
+          // --- Handle total buckets ---
+          let bucket = "";
+
+          // Define explicit mapping for products → bucket
+          const productBuckets = {
+            "Gift box": "Gift box",
+            "Hazelnut & Blueberries": "Hazelnut & Blueberries",
+            "Roasted Almonds & Pink Salt": "Roasted Almonds & Pink Salt",
+            "Kiwi & Pineapple": "Kiwi & Pineapple",
+            "Ginger & Cinnamon": "Ginger & Cinnamon",
+            "Pistachio & Black Raisin": "Pistachio & Black Raisin",
+            "Dates & Raisin": "Dates & Raisin"
+          };
+
+          if (product.includes("50g")) {
+            bucket = product.includes("Coffee") ? "Coffee 50g" : "Regular 50g";
+          } else if (product.includes("25g")) {
+            bucket = product.includes("Coffee") ? "Coffee 25g" : "Regular 25g";
+          } else if (productBuckets[product]) {
+            bucket = productBuckets[product]; 
+          } else {
+            bucket = "Unknown"; 
+          }
+
+
+          if (bucket) {
+            // Deduct from total
+            const currTotal = order.total.get(bucket) || 0;
+            order.total.set(bucket, Math.max(currTotal - qty, 0));
+
+            // Add to return_total
+            const currReturnTotal = order.return_total.get(bucket) || 0;
+            order.return_total.set(bucket, currReturnTotal + qty);
+          }
+        }
+      }
+
+      // update in shop order history
+      const shopExists = await Shop.findOne({ _id: order.shopId });
+      if (shopExists) {
+        const targetOrder = shopExists.orders.find(
+          (o) => o.orderId.toString() === order._id.toString()
+        );
+        if (targetOrder) {
+          targetOrder.status = order.status;
+          targetOrder.statusUpdatedAt = order.statusUpdatedAt;
+          targetOrder.canceledReason = order.canceledReason;
+          await shopExists.save();
+        }
+      }
+
       await order.save();
-    })
+    }
 
     res.status(200).json("Order status updated successfully");
   } catch (error) {
+    console.log(error);
+
     res.status(500).json(error.message);
   }
 };
 
 // date query
-const getDateQuery = (query, completeData, date="", month) => {
+const getDateQuery = (query, completeData, date = "", month) => {
   try {
     if (!completeData && !date) {
 
@@ -329,22 +402,22 @@ const getDateQuery = (query, completeData, date="", month) => {
 
       query.createdAt = { $gte: startOfToday, $lte: endOfToday };
     } else if (completeData) {
-      const istOffsetMs = 5.5 * 60 * 60 * 1000; 
+      const istOffsetMs = 5.5 * 60 * 60 * 1000;
       const now = new Date();
       const startOfMonthIST = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1, 0, 0, 0) - istOffsetMs);
       const endOfMonthIST = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999) - istOffsetMs);
 
       query.createdAt = { $gte: startOfMonthIST, $lte: endOfMonthIST };
-    }else if (date) {
-      const istOffsetMs = 5.5 * 60 * 60 * 1000; 
+    } else if (date) {
+      const istOffsetMs = 5.5 * 60 * 60 * 1000;
       const [year, month, day] = date.split("-").map(Number);
       const istStartofDay = new Date(Date.UTC(year, month - 1, day, 0, 0, 0) - istOffsetMs);
       const istEndofDay = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999) - istOffsetMs);
       query.createdAt = { $gte: istStartofDay, $lte: istEndofDay };
-    } 
+    }
 
     // set month passed
-    if (month){
+    if (month) {
       const now = new Date();
       const year = now.getFullYear();
 
@@ -356,14 +429,14 @@ const getDateQuery = (query, completeData, date="", month) => {
       const endIST = new Date(year, monthIndex + 1, 0, 23, 59, 59, 999);
 
       // Step 4: Convert to UTC
-      const startUTC = new Date(startIST.getTime() );
+      const startUTC = new Date(startIST.getTime());
       const endUTC = new Date(endIST.getTime());
       query.createdAt = { $gte: startUTC, $lte: endUTC };
     }
-    
+
 
     return query
-    
+
   } catch (error) {
     return
   }
@@ -382,11 +455,11 @@ const paginatedOrders = async (page, limit, query) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNum);
-      
+
     // Optional: total count for frontend pagination controls
     const totalOrders = await Order.countDocuments(query);
 
-    return {orders, totalOrders, pageNum}
+    return { orders, totalOrders, pageNum }
 
   } catch (error) {
     return error
@@ -402,13 +475,13 @@ const getOrdersByArea = async (req, res) => {
       return res.status(400).json({ message: "Area parameter is required" });
     }
 
-    if (completeData && month){
-      return res.status(404).jaon({message: "Invalid Entry"})
+    if (completeData && month) {
+      return res.status(404).jaon({ message: "Invalid Entry" })
     }
 
     // Build query
-    const query_prev = { areaId, deleted: false, status: {$ne: 'canceled' } };
-    if (req.user.role === "sr"){
+    const query_prev = { areaId, deleted: false, status: { $ne: 'canceled' } };
+    if (req.user.role === "sr") {
       query_prev.placedBy = req.user.username
     }
 
@@ -421,7 +494,7 @@ const getOrdersByArea = async (req, res) => {
     }
 
     // get paginated orders
-    const {orders, totalOrders, pageNum} = await paginatedOrders(page, limit, query);
+    const { orders, totalOrders, pageNum } = await paginatedOrders(page, limit, query);
 
     res.status(200).json({
       orders,
@@ -438,25 +511,25 @@ const getOrdersByArea = async (req, res) => {
 const getOrdersBySR = async (req, res) => {
   try {
     const { username, completeData = false, page = 1, limit = 60, placedOrders, month } = req.body;
-    
+
     if (!username) {
       return res.status(404).json("SR name is required");
     }
 
-    if (completeData && month){
-      return res.status(404).jaon({message: "Invalid Entry"})
+    if (completeData && month) {
+      return res.status(404).jaon({ message: "Invalid Entry" })
     }
 
     // Build query
-    const query_prev = { deleted: false, status: {$ne: "canceled"} };
+    const query_prev = { deleted: false, status: { $ne: "canceled" } };
 
-    if (username !== "old"){
+    if (username !== "old") {
       query_prev.placedBy = username
-    }else{
-      const usersData = await User.find({role: {$in : ["sr", "tl"] }, active: false}, {username: 1, _id:0})
+    } else {
+      const usersData = await User.find({ role: { $in: ["sr", "tl"] }, active: false }, { username: 1, _id: 0 })
       const users = []
       usersData.map(obj => users.push(obj.username))
-      query_prev.placedBy = {$in: users}
+      query_prev.placedBy = { $in: users }
     }
 
     const query = getDateQuery(query_prev, completeData, "", month)
@@ -467,9 +540,9 @@ const getOrdersBySR = async (req, res) => {
       query["products"] = {};
     }
 
-    
+
     // get paginated orders
-    const {orders, totalOrders, pageNum} = await paginatedOrders(page, limit, query);
+    const { orders, totalOrders, pageNum } = await paginatedOrders(page, limit, query);
 
     res.status(200).json({
       orders,
@@ -485,19 +558,19 @@ const getOrdersBySR = async (req, res) => {
 // Orders by date
 const getOrdersByDate = async (req, res) => {
   try {
-  
-    const { username, page = 1, limit = 60, placedOrders, date, dist="" } = req.body;
+
+    const { username, page = 1, limit = 60, placedOrders, date, dist = "" } = req.body;
 
     // Build query
-    const query_prev = { deleted: false, status: {$ne: "canceled"} };
+    const query_prev = { deleted: false, status: { $ne: "canceled" } };
     if (username) {
-      if (username !== "old"){
+      if (username !== "old") {
         query_prev.placedBy = username
-      }else{
-        const usersData = await User.find({role: {$in : ["sr", "tl"] }, active: false}, {username: 1, _id:0})
+      } else {
+        const usersData = await User.find({ role: { $in: ["sr", "tl"] }, active: false }, { username: 1, _id: 0 })
         const users = []
         usersData.map(obj => users.push(obj.username))
-        query_prev.placedBy = {$in: users}
+        query_prev.placedBy = { $in: users }
       }
     }
 
@@ -511,14 +584,14 @@ const getOrdersByDate = async (req, res) => {
 
     if (dist) {
       if (username) return res.status(404).json("Invalid Entry")
-      const areas = await Area.find({distributor: dist, deleted: {$in: [false, null]}}, {_id: 1})
+      const areas = await Area.find({ distributor: dist, deleted: { $in: [false, null] } }, { _id: 1 })
       const areaIds = []
       areas.forEach((obj) => areaIds.push(obj._id))
-      query.areaId = {$in: areaIds}
+      query.areaId = { $in: areaIds }
     }
 
     // get paginated orders
-    const {orders, totalOrders, pageNum} = await paginatedOrders(page, limit, query);
+    const { orders, totalOrders, pageNum } = await paginatedOrders(page, limit, query);
 
     res.status(200).json({
       orders,
@@ -534,23 +607,23 @@ const getOrdersByDate = async (req, res) => {
 //  get canceled/ deleted orders - placed by
 const getRevokedOrders = async (req, res) => {
   try {
-    const { username, completeData = true, page = 1, limit = 60, deleted , date, dist_username } = req.body;
-    
+    const { username, completeData = true, page = 1, limit = 60, deleted, date, dist_username } = req.body;
+
     // Build query
     const query_prev = { deleted };
 
-    if (!deleted){
+    if (!deleted) {
       query_prev.status = "canceled"
     }
 
     if (!completeData) {
-      if (username !== "old"){
+      if (username !== "old") {
         query_prev.placedBy = username
-      }else{
-        const usersData = await User.find({role: {$in : ["sr", "tl"] }, active: false}, {username: 1, _id:0})
+      } else {
+        const usersData = await User.find({ role: { $in: ["sr", "tl"] }, active: false }, { username: 1, _id: 0 })
         const users = []
         usersData.map(obj => users.push(obj.username))
-        query_prev.placedBy = {$in: users}
+        query_prev.placedBy = { $in: users }
       }
     }
 
@@ -566,10 +639,10 @@ const getRevokedOrders = async (req, res) => {
       query = getDateQuery(query_prev, true, "", "")
 
     }
-    
+
     // get paginated orders
-    const {orders, totalOrders, pageNum} = await paginatedOrders(page, limit, query);
-    
+    const { orders, totalOrders, pageNum } = await paginatedOrders(page, limit, query);
+
     res.status(200).json({
       orders,
       currentPage: pageNum,
@@ -581,37 +654,40 @@ const getRevokedOrders = async (req, res) => {
   }
 };
 
+// --- for Orders / Replacements ---
 const getReport = async (orders) => {
   try {
-    const keysToReport = ["Cranberry 50g", "Dryfruits 50g", "Peanuts 50g", "Mix seeds 50g",
+    const keysToReport = [
+      "Cranberry 50g", "Dryfruits 50g", "Peanuts 50g", "Mix seeds 50g",
       "Classic Coffee 50g", "Dark Coffee 50g", "Intense Coffee 50g", "Toxic Coffee 50g",
       "Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g",
       "Orange 25g", "Mint 25g", "Classic Coffee 25g", "Dark Coffee 25g",
-      "Intense Coffee 25g", "Toxic Coffee 25g", "Gift box"]
-
-    const totalList = [
-      "Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g", "Gift box"
+      "Intense Coffee 25g", "Toxic Coffee 25g", "Gift box",
+      "Hazelnut & Blueberries", "Roasted Almonds & Pink Salt", "Kiwi & Pineapple", "Ginger & Cinnamon", "Pistachio & Black Raisin", "Dates & Raisin"
     ];
 
-    const amountTotal = [40, 50, 27, 30, 178] // PRICE
+    const totalList = [
+      "Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g", "Gift box",
+      "Hazelnut & Blueberries", "Roasted Almonds & Pink Salt", "Kiwi & Pineapple", "Ginger & Cinnamon", "Pistachio & Black Raisin", "Dates & Raisin"
+    ];
+
+    const amountTotal = [40, 50, 27, 30, 178, 157, 145, 157, 137, 152, 178]; // PRICE
     const productTotals = {};
     const overallTotals = {};
 
-    keysToReport.forEach(key => {
-      productTotals[key] = 0;
-    });
-    totalList.forEach(key => {
-      overallTotals[key] = 0;
-    });
+    keysToReport.forEach(key => productTotals[key] = 0);
+    totalList.forEach(key => overallTotals[key] = 0);
 
     for (const order of orders) {
       const orderProducts = order.products || {};
       const orderTotal = order.total || {};
+
       keysToReport.forEach(key => {
         if (orderProducts.get(key)) {
           productTotals[key] += orderProducts.get(key);
         }
       });
+
       totalList.forEach(key => {
         if (orderTotal.get(key)) {
           overallTotals[key] += orderTotal.get(key);
@@ -619,22 +695,82 @@ const getReport = async (orders) => {
       });
     }
 
-    let amount = 0
+    let amount = 0;
     Object.keys(overallTotals).forEach((key, index) => {
-      amount += amountTotal[index] * overallTotals[key]
-    })
+      amount += amountTotal[index] * overallTotals[key];
+    });
 
-    const report = { productTotals, overallTotals, amount }
-   return report
+    return { productTotals, overallTotals, amount };
   } catch (error) {
-    return error
+    return error;
   }
-}
+};
+
+
+// for Returns + Partial Returns 
+const getReturnReport = async (orders) => {
+  try {
+    const keysToReport = [
+      "Cranberry 50g", "Dryfruits 50g", "Peanuts 50g", "Mix seeds 50g",
+      "Classic Coffee 50g", "Dark Coffee 50g", "Intense Coffee 50g", "Toxic Coffee 50g",
+      "Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g",
+      "Orange 25g", "Mint 25g", "Classic Coffee 25g", "Dark Coffee 25g",
+      "Intense Coffee 25g", "Toxic Coffee 25g", "Gift box",
+      "Hazelnut & Blueberries", "Roasted Almonds & Pink Salt", "Kiwi & Pineapple", "Ginger & Cinnamon", "Pistachio & Black Raisin", "Dates & Raisin"
+    ];
+
+    const totalList = [
+      "Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g", "Gift box", "Hazelnut & Blueberries", "Roasted Almonds & Pink Salt", "Kiwi & Pineapple", "Ginger & Cinnamon", "Pistachio & Black Raisin", "Dates & Raisin"
+    ];
+
+    const amountTotal = [40, 50, 27, 30, 178, 157, 145, 157, 137, 152, 178]; // PRICE
+    const productTotals = {};
+    const overallTotals = {};
+
+    keysToReport.forEach(key => productTotals[key] = 0);
+    totalList.forEach(key => overallTotals[key] = 0);
+
+    for (const order of orders) {
+      let orderProducts = {};
+      let orderTotal = {};
+
+      if (order.type === "return") {
+        orderProducts = order.products || {};
+        orderTotal = order.total || {};
+      } else if (order.status === "partial return") {
+        orderProducts = order.return_products || {};
+        orderTotal = order.return_total || {};
+      }
+
+      keysToReport.forEach(key => {
+        if (orderProducts.get && orderProducts.get(key)) {
+          productTotals[key] += orderProducts.get(key);
+        }
+      });
+
+      totalList.forEach(key => {
+        if (orderTotal.get && orderTotal.get(key)) {
+          overallTotals[key] += orderTotal.get(key);
+        }
+      });
+    }
+
+    let amount = 0;
+    Object.keys(overallTotals).forEach((key, index) => {
+      amount += amountTotal[index] * overallTotals[key];
+    });
+
+    return { productTotals, overallTotals, amount };
+  } catch (error) {
+    return error;
+  }
+};
+
 
 const buildReportQuery = async (dist_username, placed_username, completeData, date, month) => {
   try {
     // Build query
-    const query_prev = { deleted: false, products: { $ne: {} }};
+    const query_prev = { deleted: false, products: { $ne: {} } };
 
     // Get area ids, if distributor
     if (dist_username) {
@@ -658,37 +794,52 @@ const buildReportQuery = async (dist_username, placed_username, completeData, da
 // get orders for sales report
 const getSalesReport = async (req, res) => {
   try {
-    const { dist_username, completeData=false, placed_username, date, month, areaId } = req.body;
+    const { dist_username, completeData = false, placed_username, date, month, areaId } = req.body;
 
     if (completeData && date) {
-      return res.status(404).jaon({message: "Invalid Entry"})
+      return res.status(404).jaon({ message: "Invalid Entry" })
     }
 
-    if ((completeData || date) && month){
-      return res.status(404).jaon({message: "Invalid Entry"})
+    if ((completeData || date) && month) {
+      return res.status(404).jaon({ message: "Invalid Entry" })
     }
 
     const query = await buildReportQuery(dist_username, placed_username, completeData, date, month)
 
-    if (areaId){
+    if (areaId) {
       query.areaId = areaId
     }
 
     // For Order type
-    const order_query = {...query, type: "order", status: {$ne: 'canceled'}}
-    const order_orders = await Order.find(order_query, { products: 1, total: 1 })
+    const order_query = {
+      ...query, type: "order", $and: [
+        { status: { $ne: "canceled" } },
+        { status: { $ne: "partial return" } }]
+    }
+    const order_orders = await Order.find(order_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1 })
     const saleReport = await getReport(order_orders)
 
     // For replacement type
-    const replcement_query = {...query, type: "replacement", status: {$ne: 'canceled'}}
-    const replacement_orders = await Order.find(replcement_query, { products: 1, total: 1 })
+    const replcement_query = {
+      ...query, type: "replacement", $and: [
+        { status: { $ne: "canceled" } },
+        { status: { $ne: "partial return" } }]
+    }
+    const replacement_orders = await Order.find(replcement_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1 })
     const saleReplaceReport = await getReport(replacement_orders)
-    
+
     // For return type
-    const return_query = {...query, type: "return", status: {$ne: 'canceled'}}
-    const return_orders = await Order.find(return_query, { products: 1, total: 1 })
-    const saleReturnReport = await getReport(return_orders)
-    
+    const return_query = {
+      ...query,
+      status: { $ne: "canceled" },
+      $or: [
+        { type: "return" },
+        { status: "partial return" }
+      ]
+    };
+    const return_orders = await Order.find(return_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1 })
+    const saleReturnReport = await getReturnReport(return_orders)
+
     res.status(200).json({ saleReport, saleReplaceReport, saleReturnReport });
   } catch (error) {
     res.status(500).json(error.message);
@@ -698,33 +849,46 @@ const getSalesReport = async (req, res) => {
 // get orders for sales report
 const getCancelledReport = async (req, res) => {
   try {
-    const { dist_username, completeData=false, placed_username, date, month } = req.body;
+    const { dist_username, completeData = false, placed_username, date, month } = req.body;
 
     if (completeData && date) {
-      return res.status(404).jaon({message: "Invalid Entry"})
+      return res.status(404).jaon({ message: "Invalid Entry" })
     }
 
-    if ((completeData || date) && month){
-      return res.status(404).jaon({message: "Invalid Entry"})
+    if ((completeData || date) && month) {
+      return res.status(404).jaon({ message: "Invalid Entry" })
     }
-    
+
     const query = await buildReportQuery(dist_username, placed_username, completeData, date, month)
 
     // For Order type
-    const order_query = {...query, type: "order", status: 'canceled'}
-    const order_orders = await Order.find(order_query, { products: 1, total: 1 })
+    const order_query = {
+      ...query, type: "order", $and: [
+        { status: "canceled" },
+        { status: { $ne: "partial return" } }]
+    }
+    const order_orders = await Order.find(order_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1 })
     const cancelledReport = await getReport(order_orders)
 
     // For replacement type
-    const replcement_query = {...query, type: "replacement", status: 'canceled'}
-    const replacement_orders = await Order.find(replcement_query, { products: 1, total: 1 })
+    const replcement_query = {
+      ...query, type: "replacement", $and: [
+        { status: "canceled" },
+        { status: { $ne: "partial return" } }]
+    }
+    const replacement_orders = await Order.find(replcement_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1 })
     const cancelledReplaceReport = await getReport(replacement_orders)
-    
+
     // For return type
-    const return_query = {...query, type: "return", status: 'canceled'}
-    const return_orders = await Order.find(return_query, { products: 1, total: 1 })
-    const cancelledReturnReport = await getReport(return_orders)
-    
+    const return_query = {
+      ...query, status: 'canceled', $or: [
+        { type: "return" },
+        { status: "partial return" }
+      ]
+    }
+    const return_orders = await Order.find(return_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1 })
+    const cancelledReturnReport = await getReturnReport(return_orders)
+
     res.status(200).json({ cancelledReport, cancelledReplaceReport, cancelledReturnReport });
 
   } catch (error) {
@@ -732,11 +896,10 @@ const getCancelledReport = async (req, res) => {
   }
 };
 
-
 // CSV
 const prepareCSV = async (orders, placedOrders) => {
   try {
-    
+
     const formattedOrders = orders.map(order => {
       const date = new Date(order.createdAt);
       const day = String(date.getDate()).padStart(2, "0");
@@ -797,25 +960,25 @@ const csvExportOrder = async (req, res) => {
     const { areaId, username, completeData = false, placedOrders, date } = req.body;
 
     if (completeData && date) {
-      return res.status(400).json({ message:"Invalid entry" });
+      return res.status(400).json({ message: "Invalid entry" });
     }
     if (areaId && (username || date)) {
-      return res.status(400).json({ message:"Invalid entry" });
+      return res.status(400).json({ message: "Invalid entry" });
     }
     if (!areaId && !(username || date)) {
-      return res.status(400).json({ message:"Route, SR or Date is required" });
+      return res.status(400).json({ message: "Route, SR or Date is required" });
     }
 
     // Build query
     const query_prev = { deleted: false };
 
-    if (areaId){
+    if (areaId) {
       query_prev.areaId = areaId
     }
     if (username) {
       query_prev.placedBy = username
     }
-    
+
     const query = getDateQuery(query_prev, completeData, date)
 
     if (placedOrders) {
@@ -845,11 +1008,11 @@ const csvExportOrder = async (req, res) => {
 
 const csvExportRevokedOrder = async (req, res) => {
   try {
-    const { username, completeData = true, deleted , date } = req.body;
-    
+    const { username, completeData = true, deleted, date } = req.body;
+
     const query_prev = { deleted };
 
-    if (!deleted){
+    if (!deleted) {
       query_prev.status = "canceled"
     }
 
@@ -897,5 +1060,5 @@ module.exports = {
   getRevokedOrders,
   getOrdersByDate,
   csvExportRevokedOrder,
-  dailyCallsReport
+  dailyCallsReport,
 };

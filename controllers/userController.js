@@ -23,7 +23,7 @@ const getAllSRs = async (req, res) => {
 
 const getAllDists = async (req, res) => {
   try {
-    const dists = await User.find({ role: "distributor" }).select("_id username");
+    const dists = await User.find({ role: "distributor", active: true }).select("_id username");
     res.status(200).json(dists);
   } catch (error) {
     res.status(500).json(error.message);

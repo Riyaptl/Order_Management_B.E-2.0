@@ -17,7 +17,7 @@ const {
   getRevokedOrders,
   getOrdersByDate,
   csvExportRevokedOrder,
-  dailyCallsReport
+  dailyCallsReport,
 } = require("../controllers/orderController");
 
 // Daily report
