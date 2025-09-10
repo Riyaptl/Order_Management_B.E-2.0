@@ -6,9 +6,9 @@ const User = require("../models/User");
 const { Parser } = require("json2csv");
 
 const productList = [
-  "Cranberry 50g", "Dryfruits 50g", "Peanuts 50g", "Mix seeds 50g",
+  "Cranberry 50g", "Dryfruits 50g", "Peanuts 50g", "Mix seeds 50g", "Blueberry 50g",
   "Classic Coffee 50g", "Dark Coffee 50g", "Intense Coffee 50g", "Toxic Coffee 50g",
-  "Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g",
+  "Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g", "Blueberry 25g",
   "Orange 25g", "Mint 25g", "Classic Coffee 25g", "Dark Coffee 25g",
   "Intense Coffee 25g", "Toxic Coffee 25g", "Gift box",
   "Hazelnut & Blueberries", "Roasted Almonds & Pink Salt", "Kiwi & Pineapple", "Ginger & Cinnamon", "Pistachio & Black Raisin", "Dates & Raisin"
@@ -167,9 +167,9 @@ const createOrder = async (req, res) => {
 
       // Mapping of product keys to their respective total category
       const totalMapping = {
-        "Regular 50g": ["Cranberry 50g", "Dryfruits 50g", "Peanuts 50g", "Mix seeds 50g"],
+        "Regular 50g": ["Cranberry 50g", "Dryfruits 50g", "Peanuts 50g", "Mix seeds 50g", "Blueberry 50g"],
         "Coffee 50g": ["Classic Coffee 50g", "Dark Coffee 50g", "Intense Coffee 50g", "Toxic Coffee 50g"],
-        "Regular 25g": ["Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g", "Orange 25g", "Mint 25g"],
+        "Regular 25g": ["Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g", "Orange 25g", "Mint 25g", "Blueberry 25g"],
         "Coffee 25g": ["Classic Coffee 25g", "Dark Coffee 25g", "Intense Coffee 25g", "Toxic Coffee 25g"],
         "Gift box": ["Gift box"],
         "Hazelnut & Blueberries": ["Hazelnut & Blueberries"],
@@ -658,9 +658,9 @@ const getRevokedOrders = async (req, res) => {
 const getReport = async (orders) => {
   try {
     const keysToReport = [
-      "Cranberry 50g", "Dryfruits 50g", "Peanuts 50g", "Mix seeds 50g",
+      "Cranberry 50g", "Dryfruits 50g", "Peanuts 50g", "Mix seeds 50g", "Blueberry 50g",
       "Classic Coffee 50g", "Dark Coffee 50g", "Intense Coffee 50g", "Toxic Coffee 50g",
-      "Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g",
+      "Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g", "Blueberry 25g",
       "Orange 25g", "Mint 25g", "Classic Coffee 25g", "Dark Coffee 25g",
       "Intense Coffee 25g", "Toxic Coffee 25g", "Gift box",
       "Hazelnut & Blueberries", "Roasted Almonds & Pink Salt", "Kiwi & Pineapple", "Ginger & Cinnamon", "Pistachio & Black Raisin", "Dates & Raisin"
@@ -711,9 +711,9 @@ const getReport = async (orders) => {
 const getReturnReport = async (orders) => {
   try {
     const keysToReport = [
-      "Cranberry 50g", "Dryfruits 50g", "Peanuts 50g", "Mix seeds 50g",
+      "Cranberry 50g", "Dryfruits 50g", "Peanuts 50g", "Mix seeds 50g", "Blueberry 50g",
       "Classic Coffee 50g", "Dark Coffee 50g", "Intense Coffee 50g", "Toxic Coffee 50g",
-      "Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g",
+      "Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g", "Blueberry 25g",
       "Orange 25g", "Mint 25g", "Classic Coffee 25g", "Dark Coffee 25g",
       "Intense Coffee 25g", "Toxic Coffee 25g", "Gift box",
       "Hazelnut & Blueberries", "Roasted Almonds & Pink Salt", "Kiwi & Pineapple", "Ginger & Cinnamon", "Pistachio & Black Raisin", "Dates & Raisin"
