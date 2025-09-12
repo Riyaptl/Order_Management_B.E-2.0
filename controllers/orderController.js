@@ -691,6 +691,8 @@ const getReport = async (orders) => {
 
     let grandTotal = 0;
 
+    console.log(orders);
+    
     for (const order of orders) {
       const orderProducts = order.products || {};
       const orderTotal = order.total || {};
@@ -713,10 +715,14 @@ const getReport = async (orders) => {
       for (let i = 0; i < totalList.length; i++) {
         const item = totalList[i];
         const mrp = amountTotal[i];
-        
+
         let marginPercent = 0;
         if (item.includes("25g")) marginPercent = rate.get('25g') || 0
-        else if (item.includes("50g")) marginPercent = rate.get('50g') || 0
+        else if (item.includes("50g")) {
+          marginPercent = rate.get('50g') || 0
+          console.log('hit', marginPercent, rate);
+          
+        }
         else if (item.includes("55g")) marginPercent = rate.get('55g') || 0
         else if (item.toLowerCase().includes("gift")) marginPercent = rate.get("gift") || 0
 
@@ -727,7 +733,6 @@ const getReport = async (orders) => {
         grandTotal += landingPrice * qty;
       }
       }
-
     const amount =  grandTotal.toFixed(2)
 
     return { productTotals, overallTotals, amount };
@@ -859,18 +864,14 @@ const getSalesReport = async (req, res) => {
 
     // For Order type
     const order_query = {
-      ...query, type: "order", $and: [
-        { status: { $ne: "canceled" } },
-        { status: { $ne: "partial return" } }]
+      ...query, type: "order", status: { $ne: "canceled" } 
     }
     const order_orders = await Order.find(order_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1, rate: 1 })
     const saleReport = await getReport(order_orders)
 
     // For replacement type
     const replcement_query = {
-      ...query, type: "replacement", $and: [
-        { status: { $ne: "canceled" } },
-        { status: { $ne: "partial return" } }]
+      ...query, type: "replacement", status: { $ne: "canceled" } 
     }
     const replacement_orders = await Order.find(replcement_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1, rate: 1 })
     const saleReplaceReport = await getReport(replacement_orders)
