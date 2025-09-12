@@ -11,12 +11,12 @@ const productList = [
   "Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g", "Blueberry 25g",
   "Orange 25g", "Mint 25g", "Classic Coffee 25g", "Dark Coffee 25g",
   "Intense Coffee 25g", "Toxic Coffee 25g", "Gift box",
-  "Hazelnut & Blueberries", "Roasted Almonds & Pink Salt", "Kiwi & Pineapple", "Ginger & Cinnamon", "Pistachio & Black Raisin", "Dates & Raisin"
+  "Hazelnut & Blueberries 55g", "Roasted Almonds & Pink Salt 55g", "Kiwi & Pineapple 55g", "Ginger & Cinnamon 55g", "Pistachio & Black Raisin 55g", "Dates & Raisin 55g"
 ];
 
 const totalList = [
   "Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g", "Gift box",
-  "Hazelnut & Blueberries", "Roasted Almonds & Pink Salt", "Kiwi & Pineapple", "Ginger & Cinnamon", "Pistachio & Black Raisin", "Dates & Raisin"
+  "Hazelnut & Blueberries 55g", "Roasted Almonds & Pink Salt 55g", "Kiwi & Pineapple 55g", "Ginger & Cinnamon 55g", "Pistachio & Black Raisin 55g", "Dates & Raisin 55g"
 ];
 
 
@@ -50,7 +50,7 @@ const dailyReport = async (req, res) => {
 
     const orders = await Order.find(query);
 
-    const orderKeys = ["Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g", "Gift box", "Hazelnut & Blueberries", "Roasted Almonds & Pink Salt", "Kiwi & Pineapple", "Ginger & Cinnamon", "Pistachio & Black Raisin", "Dates & Raisin"];
+    const orderKeys = ["Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g", "Gift box", "Hazelnut & Blueberries 55g", "Roasted Almonds & Pink Salt 55g", "Kiwi & Pineapple 55g", "Ginger & Cinnamon 55g", "Pistachio & Black Raisin 55g", "Dates & Raisin 55g"];
     const prefixes = ["Ordered", "Cancelled"];
     const keysToReport = orderKeys.flatMap(key =>
       prefixes.map(prefix => `${prefix} ${key}`)
@@ -150,7 +150,7 @@ const dailyCallsReport = async (req, res) => {
 // 1. Create Order
 const createOrder = async (req, res) => {
   try {
-    const { shopId, areaId, products, placedBy, location, paymentTerms, remarks, orderPlacedBy, type = "order", date } = req.body;
+    const { shopId, areaId, products, rate, placedBy, location, paymentTerms, remarks, orderPlacedBy, type = "order", date } = req.body;
 
     const createdBy = req.user.username;
     const finalPlacedBy = placedBy || createdBy
@@ -159,7 +159,7 @@ const createOrder = async (req, res) => {
     const shopExists = await Shop.findOne({ _id: shopId, deleted: { $in: [false, null] } });
     if (!areaExists || !shopExists) return res.status(400).json("Invalid area or shop ID");
 
-    let data = { shopId, areaId, placedBy: finalPlacedBy, products, createdBy, location, paymentTerms, remarks, orderPlacedBy, type, createdAt: date }
+    let data = { shopId, areaId, placedBy: finalPlacedBy, products, rate, createdBy, location, paymentTerms, remarks, orderPlacedBy, type, createdAt: date }
 
     // Calculate total if products exist
     let total = {}
@@ -172,12 +172,12 @@ const createOrder = async (req, res) => {
         "Regular 25g": ["Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g", "Orange 25g", "Mint 25g", "Blueberry 25g"],
         "Coffee 25g": ["Classic Coffee 25g", "Dark Coffee 25g", "Intense Coffee 25g", "Toxic Coffee 25g"],
         "Gift box": ["Gift box"],
-        "Hazelnut & Blueberries": ["Hazelnut & Blueberries"],
-        "Roasted Almonds & Pink Salt": ["Roasted Almonds & Pink Salt"],
-        "Kiwi & Pineapple": ["Kiwi & Pineapple"],
-        "Ginger & Cinnamon": ["Ginger & Cinnamon"],
-        "Pistachio & Black Raisin": ["Pistachio & Black Raisin"],
-        "Dates & Raisin": ["Dates & Raisin"]
+        "Hazelnut & Blueberries 55g": ["Hazelnut & Blueberries 55g"],
+        "Roasted Almonds & Pink Salt 55g": ["Roasted Almonds & Pink Salt 55g"],
+        "Kiwi & Pineapple 55g": ["Kiwi & Pineapple 55g"],
+        "Ginger & Cinnamon 55g": ["Ginger & Cinnamon 55g"],
+        "Pistachio & Black Raisin 55g": ["Pistachio & Black Raisin 55g"],
+        "Dates & Raisin 55g": ["Dates & Raisin 55g"]
       };
 
       // Calculate total object
@@ -187,12 +187,12 @@ const createOrder = async (req, res) => {
         "Regular 25g": 0,
         "Coffee 25g": 0,
         "Gift box": 0,
-        "Hazelnut & Blueberries": 0,
-        "Roasted Almonds & Pink Salt": 0,
-        "Kiwi & Pineapple": 0,
-        "Ginger & Cinnamon": 0,
-        "Pistachio & Black Raisin": 0,
-        "Dates & Raisin": 0
+        "Hazelnut & Blueberries 55g": 0,
+        "Roasted Almonds & Pink Salt 55g": 0,
+        "Kiwi & Pineapple 55g": 0,
+        "Ginger & Cinnamon 55g": 0,
+        "Pistachio & Black Raisin 55g": 0,
+        "Dates & Raisin 55g": 0
       };
 
       // Loop through each category and sum up matching product quantities
@@ -212,7 +212,7 @@ const createOrder = async (req, res) => {
 
     if (Object.keys(products).length !== 0) {
 
-      let shopData = { placedBy: finalPlacedBy, products, total, paymentTerms, remarks, orderPlacedBy, createdAt: date, orderId: order._id, type }
+      let shopData = { placedBy: finalPlacedBy, products, total, rate, paymentTerms, remarks, orderPlacedBy, createdAt: date, orderId: order._id, type }
       if (!shopExists.orders) {
         shopExists.orders = []
       }
@@ -238,6 +238,8 @@ const createOrder = async (req, res) => {
     await order.save();
     res.status(201).json({ "message": "Order created successfully" });
   } catch (error) {
+    console.log(error);
+
     res.status(500).json(error.message);
   }
 };
@@ -285,6 +287,8 @@ const softDeleteOrder = async (req, res) => {
 
     res.status(200).json("Order deleted successfully");
   } catch (error) {
+    console.log(error);
+    
     res.status(500).json(error.message);
   }
 };
@@ -299,10 +303,10 @@ const statusOrder = async (req, res) => {
       if (!order) return res.status(404).json("Order not found");
 
       // Only allow update if current status is pending
-      if (order.status === "pending") {
-        order.status = status;
-      }
-
+      // if (order.status === "pending") {
+        // }
+        
+      order.status = status;
       order.canceledReason = reason;
       order.statusUpdatedBy = req.user.username;
       order.statusUpdatedAt = Date.now();
@@ -333,12 +337,12 @@ const statusOrder = async (req, res) => {
           // Define explicit mapping for products → bucket
           const productBuckets = {
             "Gift box": "Gift box",
-            "Hazelnut & Blueberries": "Hazelnut & Blueberries",
-            "Roasted Almonds & Pink Salt": "Roasted Almonds & Pink Salt",
-            "Kiwi & Pineapple": "Kiwi & Pineapple",
-            "Ginger & Cinnamon": "Ginger & Cinnamon",
-            "Pistachio & Black Raisin": "Pistachio & Black Raisin",
-            "Dates & Raisin": "Dates & Raisin"
+            "Hazelnut & Blueberries 55g": "Hazelnut & Blueberries 55g",
+            "Roasted Almonds & Pink Salt 55g": "Roasted Almonds & Pink Salt 55g",
+            "Kiwi & Pineapple 55g": "Kiwi & Pineapple 55g",
+            "Ginger & Cinnamon 55g": "Ginger & Cinnamon 55g",
+            "Pistachio & Black Raisin 55g": "Pistachio & Black Raisin 55g",
+            "Dates & Raisin 55g": "Dates & Raisin 55g"
           };
 
           if (product.includes("50g")) {
@@ -346,9 +350,9 @@ const statusOrder = async (req, res) => {
           } else if (product.includes("25g")) {
             bucket = product.includes("Coffee") ? "Coffee 25g" : "Regular 25g";
           } else if (productBuckets[product]) {
-            bucket = productBuckets[product]; 
+            bucket = productBuckets[product];
           } else {
-            bucket = "Unknown"; 
+            bucket = "Unknown";
           }
 
 
@@ -374,6 +378,13 @@ const statusOrder = async (req, res) => {
           targetOrder.status = order.status;
           targetOrder.statusUpdatedAt = order.statusUpdatedAt;
           targetOrder.canceledReason = order.canceledReason;
+
+          // 🟢 Sync products/total/returns as well
+          targetOrder.products = order.products;
+          targetOrder.total = order.total;
+          targetOrder.return_products = order.return_products;
+          targetOrder.return_total = order.return_total;
+
           await shopExists.save();
         }
       }
@@ -663,24 +674,27 @@ const getReport = async (orders) => {
       "Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g", "Blueberry 25g",
       "Orange 25g", "Mint 25g", "Classic Coffee 25g", "Dark Coffee 25g",
       "Intense Coffee 25g", "Toxic Coffee 25g", "Gift box",
-      "Hazelnut & Blueberries", "Roasted Almonds & Pink Salt", "Kiwi & Pineapple", "Ginger & Cinnamon", "Pistachio & Black Raisin", "Dates & Raisin"
+      "Hazelnut & Blueberries 55g", "Roasted Almonds & Pink Salt 55g", "Kiwi & Pineapple 55g", "Ginger & Cinnamon 55g", "Pistachio & Black Raisin 55g", "Dates & Raisin 55g"
     ];
 
     const totalList = [
       "Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g", "Gift box",
-      "Hazelnut & Blueberries", "Roasted Almonds & Pink Salt", "Kiwi & Pineapple", "Ginger & Cinnamon", "Pistachio & Black Raisin", "Dates & Raisin"
+      "Hazelnut & Blueberries 55g", "Roasted Almonds & Pink Salt 55g", "Kiwi & Pineapple 55g", "Ginger & Cinnamon 55g", "Pistachio & Black Raisin 55g", "Dates & Raisin 55g"
     ];
 
-    const amountTotal = [40, 50, 27, 30, 178, 157, 145, 157, 137, 152, 178]; // PRICE
+    const amountTotal = [80, 99, 45, 50, 350, 310, 285, 310, 270, 300, 350]; // PRICE, MRP
     const productTotals = {};
     const overallTotals = {};
 
     keysToReport.forEach(key => productTotals[key] = 0);
     totalList.forEach(key => overallTotals[key] = 0);
 
+    let grandTotal = 0;
+
     for (const order of orders) {
       const orderProducts = order.products || {};
       const orderTotal = order.total || {};
+      const rate = order.rate || { "25g": 0, "50g": 0, "55g": 0, "gift": 0 };
 
       keysToReport.forEach(key => {
         if (orderProducts.get(key)) {
@@ -693,12 +707,28 @@ const getReport = async (orders) => {
           overallTotals[key] += orderTotal.get(key);
         }
       });
-    }
 
-    let amount = 0;
-    Object.keys(overallTotals).forEach((key, index) => {
-      amount += amountTotal[index] * overallTotals[key];
-    });
+      const landingPrices = [];
+
+      for (let i = 0; i < totalList.length; i++) {
+        const item = totalList[i];
+        const mrp = amountTotal[i];
+        
+        let marginPercent = 0;
+        if (item.includes("25g")) marginPercent = rate.get('25g') || 0
+        else if (item.includes("50g")) marginPercent = rate.get('50g') || 0
+        else if (item.includes("55g")) marginPercent = rate.get('55g') || 0
+        else if (item.toLowerCase().includes("gift")) marginPercent = rate.get("gift") || 0
+
+        const landingPrice = (mrp - (mrp * marginPercent / 100)) / 1.18;
+
+        landingPrices.push(parseFloat(landingPrice.toFixed(2)))
+        const qty = orderTotal.get(item) || 0;
+        grandTotal += landingPrice * qty;
+      }
+      }
+
+    const amount =  grandTotal.toFixed(2)
 
     return { productTotals, overallTotals, amount };
   } catch (error) {
@@ -716,23 +746,25 @@ const getReturnReport = async (orders) => {
       "Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g", "Blueberry 25g",
       "Orange 25g", "Mint 25g", "Classic Coffee 25g", "Dark Coffee 25g",
       "Intense Coffee 25g", "Toxic Coffee 25g", "Gift box",
-      "Hazelnut & Blueberries", "Roasted Almonds & Pink Salt", "Kiwi & Pineapple", "Ginger & Cinnamon", "Pistachio & Black Raisin", "Dates & Raisin"
+      "Hazelnut & Blueberries 55g", "Roasted Almonds & Pink Salt 55g", "Kiwi & Pineapple 55g", "Ginger & Cinnamon 55g", "Pistachio & Black Raisin 55g", "Dates & Raisin 55g"
     ];
 
     const totalList = [
-      "Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g", "Gift box", "Hazelnut & Blueberries", "Roasted Almonds & Pink Salt", "Kiwi & Pineapple", "Ginger & Cinnamon", "Pistachio & Black Raisin", "Dates & Raisin"
+      "Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g", "Gift box", "Hazelnut & Blueberries 55g", "Roasted Almonds & Pink Salt 55g", "Kiwi & Pineapple 55g", "Ginger & Cinnamon 55g", "Pistachio & Black Raisin 55g", "Dates & Raisin 55g"
     ];
 
-    const amountTotal = [40, 50, 27, 30, 178, 157, 145, 157, 137, 152, 178]; // PRICE
+    const amountTotal = [80, 99, 45, 50, 350, 310, 285, 310, 270, 300, 350]; // PRICE, MRP
     const productTotals = {};
     const overallTotals = {};
 
     keysToReport.forEach(key => productTotals[key] = 0);
     totalList.forEach(key => overallTotals[key] = 0);
 
+    let grandTotal = 0;
     for (const order of orders) {
       let orderProducts = {};
       let orderTotal = {};
+      const rate = order.rate || { "25g": 0, "50g": 0, "55g": 0, "gift": 0 };
 
       if (order.type === "return") {
         orderProducts = order.products || {};
@@ -753,13 +785,28 @@ const getReturnReport = async (orders) => {
           overallTotals[key] += orderTotal.get(key);
         }
       });
+
+      const landingPrices = [];
+
+      for (let i = 0; i < totalList.length; i++) {
+        const item = totalList[i];
+        const mrp = amountTotal[i];
+        
+        let marginPercent = 0;
+        if (item.includes("25g")) marginPercent = rate.get('25g') || 0
+        else if (item.includes("50g")) marginPercent = rate.get('50g') || 0
+        else if (item.includes("55g")) marginPercent = rate.get('55g') || 0
+        else if (item.toLowerCase().includes("gift")) marginPercent = rate.get("gift") || 0
+
+        const landingPrice = (mrp - (mrp * marginPercent / 100)) / 1.18;
+
+        landingPrices.push(parseFloat(landingPrice.toFixed(2)))
+        const qty = orderTotal.get(item) || 0;
+        grandTotal += landingPrice * qty;
+      }
     }
 
-    let amount = 0;
-    Object.keys(overallTotals).forEach((key, index) => {
-      amount += amountTotal[index] * overallTotals[key];
-    });
-
+   const amount =  grandTotal.toFixed(2) 
     return { productTotals, overallTotals, amount };
   } catch (error) {
     return error;
@@ -816,7 +863,7 @@ const getSalesReport = async (req, res) => {
         { status: { $ne: "canceled" } },
         { status: { $ne: "partial return" } }]
     }
-    const order_orders = await Order.find(order_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1 })
+    const order_orders = await Order.find(order_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1, rate: 1 })
     const saleReport = await getReport(order_orders)
 
     // For replacement type
@@ -825,7 +872,7 @@ const getSalesReport = async (req, res) => {
         { status: { $ne: "canceled" } },
         { status: { $ne: "partial return" } }]
     }
-    const replacement_orders = await Order.find(replcement_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1 })
+    const replacement_orders = await Order.find(replcement_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1, rate: 1 })
     const saleReplaceReport = await getReport(replacement_orders)
 
     // For return type
@@ -837,7 +884,7 @@ const getSalesReport = async (req, res) => {
         { status: "partial return" }
       ]
     };
-    const return_orders = await Order.find(return_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1 })
+    const return_orders = await Order.find(return_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1, rate: 1 })
     const saleReturnReport = await getReturnReport(return_orders)
 
     res.status(200).json({ saleReport, saleReplaceReport, saleReturnReport });
@@ -867,7 +914,7 @@ const getCancelledReport = async (req, res) => {
         { status: "canceled" },
         { status: { $ne: "partial return" } }]
     }
-    const order_orders = await Order.find(order_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1 })
+    const order_orders = await Order.find(order_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1, rate: 1 })
     const cancelledReport = await getReport(order_orders)
 
     // For replacement type
@@ -876,7 +923,7 @@ const getCancelledReport = async (req, res) => {
         { status: "canceled" },
         { status: { $ne: "partial return" } }]
     }
-    const replacement_orders = await Order.find(replcement_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1 })
+    const replacement_orders = await Order.find(replcement_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1, rate: 1 })
     const cancelledReplaceReport = await getReport(replacement_orders)
 
     // For return type
@@ -886,7 +933,7 @@ const getCancelledReport = async (req, res) => {
         { status: "partial return" }
       ]
     }
-    const return_orders = await Order.find(return_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1 })
+    const return_orders = await Order.find(return_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1, rate: 1 })
     const cancelledReturnReport = await getReturnReport(return_orders)
 
     res.status(200).json({ cancelledReport, cancelledReplaceReport, cancelledReturnReport });
