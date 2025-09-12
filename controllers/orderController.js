@@ -690,8 +690,6 @@ const getReport = async (orders) => {
     totalList.forEach(key => overallTotals[key] = 0);
 
     let grandTotal = 0;
-
-    console.log(orders);
     
     for (const order of orders) {
       const orderProducts = order.products || {};
@@ -718,11 +716,7 @@ const getReport = async (orders) => {
 
         let marginPercent = 0;
         if (item.includes("25g")) marginPercent = rate.get('25g') || 0
-        else if (item.includes("50g")) {
-          marginPercent = rate.get('50g') || 0
-          console.log('hit', marginPercent, rate);
-          
-        }
+        else if (item.includes("50g")) marginPercent = rate.get('50g') || 0
         else if (item.includes("55g")) marginPercent = rate.get('55g') || 0
         else if (item.toLowerCase().includes("gift")) marginPercent = rate.get("gift") || 0
 
