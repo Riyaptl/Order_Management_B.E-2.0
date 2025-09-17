@@ -150,7 +150,7 @@ const dailyCallsReport = async (req, res) => {
 // 1. Create Order
 const createOrder = async (req, res) => {
   try {
-    const { shopId, areaId, products, rate, placedBy, location, paymentTerms, remarks, orderPlacedBy, type = "order", date } = req.body;
+    let { shopId, areaId, products, rate, placedBy, location, paymentTerms, remarks, orderPlacedBy, type = "order", date } = req.body;
 
     const createdBy = req.user.username;
     const finalPlacedBy = placedBy || createdBy
@@ -158,6 +158,10 @@ const createOrder = async (req, res) => {
     const areaExists = await Area.findOne({ _id: areaId, deleted: { $in: [false, null] } });
     const shopExists = await Shop.findOne({ _id: shopId, deleted: { $in: [false, null] } });
     if (!areaExists || !shopExists) return res.status(400).json("Invalid area or shop ID");
+
+    if (!rate){
+      rate = {"25g": 28, "50g": 40, "55g": 40, "gift": 40}
+    }
 
     let data = { shopId, areaId, placedBy: finalPlacedBy, products, rate, createdBy, location, paymentTerms, remarks, orderPlacedBy, type, createdAt: date }
 
@@ -695,7 +699,7 @@ const getReport = async (orders) => {
       const orderProducts = order.products || {};
       const orderTotal = order.total || {};
       const rate = order.rate || { "25g": 0, "50g": 0, "55g": 0, "gift": 0 };
-
+      
       keysToReport.forEach(key => {
         if (orderProducts.get(key)) {
           productTotals[key] += orderProducts.get(key);
