@@ -167,7 +167,7 @@ const createOrder = async (req, res) => {
 
     // Calculate total if products exist
     let total = {}
-    if (Object.keys(products).length !== 0) {
+    if (products && Object.keys(products.toObject ? products.toObject() : products).length !== 0) {
 
       // Mapping of product keys to their respective total category
       const totalMapping = {
@@ -208,37 +208,40 @@ const createOrder = async (req, res) => {
         });
       }
       data["total"] = total
+      
     } else {
       if (!location) return res.status(400).json("Location not found");
     }
 
     const order = new Order(data);
 
-    if (Object.keys(products).length !== 0) {
+    // if (products && Object.keys(products.toObject ? products.toObject() : products).length !== 0) {
 
-      let shopData = { placedBy: finalPlacedBy, products, total, rate, paymentTerms, remarks, orderPlacedBy, createdAt: date, orderId: order._id, type }
-      if (!shopExists.orders) {
-        shopExists.orders = []
-      }
-      shopExists.orders.push(shopData)
-      if (shopExists.orders.length > 3) {
-        shopExists.orders.shift()
-      }
-    }
-    // shopExists.visitedAt = new Date(Date.now()).toLocaleDateString("en-IN", {
-    //   timeZone: "Asia/Kolkata",
-    // });
-    shopExists.visitedAt = date
-    if (type === "order" && !location) {
-      if (shopExists.first) {
-        shopExists.repeat = true
-        shopExists.first = false
-      } else if (!shopExists.first && !shopExists.repeat) {
-        shopExists.first = true
-      }
-    }
+    //   let shopData = { placedBy: finalPlacedBy, products, total: order.total, rate, paymentTerms, remarks, orderPlacedBy, createdAt: date, orderId: order._id, type }    
+    //   if (!shopExists.orders) {
+    //     shopExists.orders = []
+    //   }
+    //   shopExists.orders.push(shopData)
+    //   if (shopExists.orders.length > 3) {
+    //     shopExists.orders.shift()
+    //   }
+    // }
 
-    await shopExists.save()
+    // shopExists.visitedAt = date
+    // if (type === "order" && !location) {
+    //   if (shopExists.first) {
+    //     shopExists.repeat = true
+    //     shopExists.first = false
+    //   } else if (!shopExists.first && !shopExists.repeat) {
+    //     shopExists.first = true
+    //   }
+    // }
+
+    // console.log(order.total);
+    // console.log(shopExists.orYders);
+    
+    
+    // await shopExists.save()
     await order.save();
     res.status(201).json({ "message": "Order created successfully" });
   } catch (error) {
