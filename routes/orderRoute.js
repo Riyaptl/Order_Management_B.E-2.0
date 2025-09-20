@@ -20,6 +20,9 @@ const {
   dailyCallsReport,
 } = require("../controllers/orderController");
 
+
+// router.post("/fix", fixTotals);
+
 // Daily report
 router.post("/report", authenticateUser, authorizeRoles("admin", "sr", "tl"), dailyReport);
 

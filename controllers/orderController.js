@@ -147,7 +147,43 @@ const dailyCallsReport = async (req, res) => {
   }
 };
 
+// async function fixTotals() {
+//   const totalMapping = {
+//   "Regular 50g": ["Cranberry 50g", "Dryfruits 50g", "Peanuts 50g", "Mix seeds 50g", "Blueberry 50g"],
+//   "Coffee 50g": ["Classic Coffee 50g", "Dark Coffee 50g", "Intense Coffee 50g", "Toxic Coffee 50g"],
+//   "Regular 25g": ["Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g", "Orange 25g", "Mint 25g", "Blueberry 25g"],
+//   "Coffee 25g": ["Classic Coffee 25g", "Dark Coffee 25g", "Intense Coffee 25g", "Toxic Coffee 25g"],
+//   "Gift box": ["Gift box"],
+//   "Hazelnut & Blueberries 55g": ["Hazelnut & Blueberries 55g"],
+//   "Roasted Almonds & Pink Salt 55g": ["Roasted Almonds & Pink Salt 55g"],
+//   "Kiwi & Pineapple 55g": ["Kiwi & Pineapple 55g"],
+//   "Ginger & Cinnamon 55g": ["Ginger & Cinnamon 55g"],
+//   "Pistachio & Black Raisin 55g": ["Pistachio & Black Raisin 55g"],
+//   "Dates & Raisin 55g": ["Dates & Raisin 55g"]
+// };
+
+//   const orders = await Order.find({ deleted: false, location: { $exists: false } });
+  
+//   for (const order of orders) {
+//     const products = order.products || {};
+//     const total = {};
+    
+//     for (const [category, keys] of Object.entries(totalMapping)) {
+//       total[category] = keys.reduce((sum, key) => sum + (products.get(key) || 0), 0);
+//     }
+
+//     order.total = new Map(Object.entries(total));
+//     console.log(total);
+    
+//     // await order.save();
+//     // console.log(`Fixed order ${order._id}`);
+//   }
+  
+//   console.log('All totals fixed!');
+// }
+
 // 1. Create Order
+
 const createOrder = async (req, res) => {
   try {
     let { shopId, areaId, products, rate, placedBy, location, paymentTerms, remarks, orderPlacedBy, type = "order", date } = req.body;
@@ -215,33 +251,30 @@ const createOrder = async (req, res) => {
 
     const order = new Order(data);
 
-    // if (products && Object.keys(products.toObject ? products.toObject() : products).length !== 0) {
+    if (products && Object.keys(products.toObject ? products.toObject() : products).length !== 0) {
 
-    //   let shopData = { placedBy: finalPlacedBy, products, total: order.total, rate, paymentTerms, remarks, orderPlacedBy, createdAt: date, orderId: order._id, type }    
-    //   if (!shopExists.orders) {
-    //     shopExists.orders = []
-    //   }
-    //   shopExists.orders.push(shopData)
-    //   if (shopExists.orders.length > 3) {
-    //     shopExists.orders.shift()
-    //   }
-    // }
+      let shopData = { placedBy: finalPlacedBy, products, total, rate, paymentTerms, remarks, orderPlacedBy, createdAt: date, orderId: order._id, type }    
+      
+      if (!shopExists.orders) {
+        shopExists.orders = []
+      }
+      shopExists.orders.push(shopData)
+      // if (shopExists.orders.length > 3) {
+      //   shopExists.orders.shift()
+      // }
+    }
 
-    // shopExists.visitedAt = date
-    // if (type === "order" && !location) {
-    //   if (shopExists.first) {
-    //     shopExists.repeat = true
-    //     shopExists.first = false
-    //   } else if (!shopExists.first && !shopExists.repeat) {
-    //     shopExists.first = true
-    //   }
-    // }
+    shopExists.visitedAt = date
+    if (type === "order" && !location) {
+      if (shopExists.first) {
+        shopExists.repeat = true
+        shopExists.first = false
+      } else if (!shopExists.first && !shopExists.repeat) {
+        shopExists.first = true
+      }
+    }
 
-    // console.log(order.total);
-    // console.log(shopExists.orYders);
-    
-    
-    // await shopExists.save()
+    await shopExists.save()
     await order.save();
     res.status(201).json({ "message": "Order created successfully" });
   } catch (error) {
@@ -387,10 +420,10 @@ const statusOrder = async (req, res) => {
           targetOrder.canceledReason = order.canceledReason;
 
           // 🟢 Sync products/total/returns as well
-          targetOrder.products = order.products;
-          targetOrder.total = order.total;
-          targetOrder.return_products = order.return_products;
-          targetOrder.return_total = order.return_total;
+          targetOrder.products = new Map(order.products);
+          targetOrder.total = new Map(order.total);
+          targetOrder.return_products = new Map(order.return_products);
+          targetOrder.return_total = new Map(order.return_total);
 
           await shopExists.save();
         }
@@ -697,11 +730,10 @@ const getReport = async (orders) => {
     totalList.forEach(key => overallTotals[key] = 0);
 
     let grandTotal = 0;
-    
     for (const order of orders) {
       const orderProducts = order.products || {};
       const orderTotal = order.total || {};
-      const rate = order.rate || { "25g": 0, "50g": 0, "55g": 0, "gift": 0 };
+      const rate = order.rate || { "25g": 28, "50g": 40, "55g": 40, "gift": 40 };
       
       keysToReport.forEach(key => {
         if (orderProducts.get(key)) {
@@ -710,11 +742,10 @@ const getReport = async (orders) => {
       });
 
       totalList.forEach(key => {
-        if (orderTotal.get(key)) {
-          overallTotals[key] += orderTotal.get(key);
+        if (orderTotal.get ? orderTotal.get(key) : orderTotal[key]) {
+          overallTotals[key] += (orderTotal.get ? orderTotal.get(key) : orderTotal[key]) || 0;
         }
       });
-
       const landingPrices = [];
 
       for (let i = 0; i < totalList.length; i++) {
@@ -728,8 +759,10 @@ const getReport = async (orders) => {
         else if (item.toLowerCase().includes("gift")) marginPercent = rate.get("gift") || 0
 
         const landingPrice = (mrp - (mrp * marginPercent / 100)) / 1.18;
-
+        
+        
         landingPrices.push(parseFloat(landingPrice.toFixed(2)))
+        
         const qty = orderTotal.get(item) || 0;
         grandTotal += landingPrice * qty;
       }
