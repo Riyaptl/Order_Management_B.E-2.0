@@ -16,6 +16,10 @@ const AreaSchema = new mongoose.Schema({
   areas: [{
     type: String
   }],
+  city: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "City"
+  },
   createdBy: {
     type: String,
     required: true,

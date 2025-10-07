@@ -1,6 +1,15 @@
 const City = require("../models/City")
 const { Parser } = require("json2csv");
 
+// get all cities with _id which will be passed in area creation
+const getAllCities = async (req, res) => {
+  try {
+    const cities = await City.find({}, { name: 1, _id: 1 });
+    return res.status(200).json(cities);
+  } catch (error) {
+    return res.status(500).json(error);
+  }
+};
 
 // 1. Create Area
 const createCity = async (req, res) => {
@@ -41,95 +50,83 @@ const updateCity = async (req, res) => {
 };
 
 // 3. Delete City (only if no areas)
-const deleteCity = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const city = await City.findById(id);
-    if (!city) return res.status(404).json( "City not found");
+// const deleteCity = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const city = await City.findById(id);
+//     if (!city) return res.status(404).json( "City not found");
 
-    if (city.areas.length > 0) {
-      return res.status(400).json("Cannot delete city with areas");
-    }
+//     if (city.areas.length > 0) {
+//       return res.status(400).json("Cannot delete city with areas");
+//     }
 
-    await City.findByIdAndDelete(id);
-    res.status(200).json( {"message": "City deleted"} );
-  } catch (error) {
-    res.status(500).json(error.message);
-  }
-};
+//     await City.findByIdAndDelete(id);
+//     res.status(200).json( {"message": "City deleted"} );
+//   } catch (error) {
+//     res.status(500).json(error.message);
+//   }
+// };
 
-// 4. Read All Area Names Only (as array of strings)
-const getAllCities = async (req, res) => {
-  try {
-    const cities = await City.find({}, 'name'); 
-    res.status(200).json(cities);
-  } catch (error) {
-    res.status(500).json(error.message);
-  }
-};
 
 // 5. Read All Area with Pagination
-const getCities = async (req, res) => {
-  try {
-    const page = parseInt(req.query.page) || 1; 
-    const limit = 20;
-    const skip = (page - 1) * limit;
+// const getCities = async (req, res) => {
+//   try {
+//     const page = parseInt(req.query.page) || 1; 
+//     const limit = 20;
+//     const skip = (page - 1) * limit;
 
-    const totalCount = await City.countDocuments();
-    const cities = await City.find().sort({ createdAt: -1 }).skip(skip).limit(limit);
+//     const totalCount = await City.countDocuments();
+//     const cities = await City.find().sort({ createdAt: -1 }).skip(skip).limit(limit);
     
-    res.status(200).json({
-      cities,
-      currentPage: page,
-      totalPages: Math.ceil(totalCount / limit),
-      totalCount
-    });
+//     res.status(200).json({
+//       cities,
+//       currentPage: page,
+//       totalPages: Math.ceil(totalCount / limit),
+//       totalCount
+//     });
 
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
 
 // 4. CSV Export
-const csvExportCity = async (req, res) => {
-  try {
+// const csvExportCity = async (req, res) => {
+//   try {
 
-    const cities = await City.find().sort({ createdAt: -1 })
+//     const cities = await City.find().sort({ createdAt: -1 })
 
-    const formattedCities = cities.map(city => {
-      const row = {
-        Name: city?.name || "",
-        Areas: city?.areas || "",
-        "Created By": city?.createdBy || "",
-        "Updated By": city?.updatedBy || "",
-      };
-      return row;
-    });
+//     const formattedCities = cities.map(city => {
+//       const row = {
+//         Name: city?.name || "",
+//         Areas: city?.areas || "",
+//         "Created By": city?.createdBy || "",
+//         "Updated By": city?.updatedBy || "",
+//       };
+//       return row;
+//     });
 
-    const fields = [
-      "Name",
-      "Created By",
-      "Updated By",
-    ];
+//     const fields = [
+//       "Name",
+//       "Created By",
+//       "Updated By",
+//     ];
     
-    const json2csvParser = new Parser({ fields });
-    const csv = json2csvParser.parse(formattedCities);
+//     const json2csvParser = new Parser({ fields });
+//     const csv = json2csvParser.parse(formattedCities);
        
-    res.header("Content-Type", "text/csv");
-    res.attachment("cities.csv");
-    return res.send(csv);
+//     res.header("Content-Type", "text/csv");
+//     res.attachment("cities.csv");
+//     return res.send(csv);
 
-  } catch (error) {
-    res.status(500).json(error.message);
-  }
-};
+//   } catch (error) {
+//     res.status(500).json(error.message);
+//   }
+// };
 
 
 module.exports = {
   createCity,
   updateCity,
-  deleteCity,
   getAllCities,
-  getCities,
-  csvExportCity
 };

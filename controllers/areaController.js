@@ -1,4 +1,5 @@
 const Area = require("../models/Area")
+const City = require("../models/City")
 const { Parser } = require("json2csv");
 const Shop = require("../models/Shop");
 
@@ -6,7 +7,8 @@ const Shop = require("../models/Shop");
 // 1. Create Area
 const createArea = async (req, res) => {
   try {
-    const { name, areas, distributor } = req.body;
+    const { name, areas, distributor, city } = req.body;
+    
     let dist_trimmed = distributor
     if (distributor){
       dist_trimmed = distributor.trim()
@@ -16,8 +18,25 @@ const createArea = async (req, res) => {
     if (existingArea) {
       return res.status(400).json("Area with this name already exists");
     }   
-    const area = new Area({ name: name.trim(), shops: [], createdBy: req.user.username, areas, distributor:dist_trimmed });
+
+    let query = { name: name.trim(), shops: [], createdBy: req.user.username, areas, distributor:dist_trimmed }
+    if (city){
+      query.city = city
+    }
+    const area = new Area(query);
+
+    // add into city
+    if (city){
+      const cityExists = await City.findOne({_id: city})
+      if (!cityExists){
+        return res.status(400).json("City doesn't exists");
+      }
+      cityExists.areas.push(area._id)
+      await cityExists.save()
+    }
+
     await area.save();
+
     res.status(201).json(area);
   } catch (error) {
     res.status(500).json(error.message);
@@ -28,7 +47,8 @@ const createArea = async (req, res) => {
 const updateAreaName = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, areas, distributor } = req.body;
+    const { name, areas, distributor, city } = req.body;
+    
     let dist_trimmed = distributor
     if (distributor){
       dist_trimmed = distributor.trim()
@@ -40,13 +60,42 @@ const updateAreaName = async (req, res) => {
       return res.status(400).json("Area with this name already exists");
     }
 
+    // get area and city
+    const currArea = await Area.findById(id)
+    const prevCity = currArea.city 
+
+    // if city exists  
+    if (city) {
+      const cityExists = await City.findOne({_id: city})
+      if (!cityExists){
+        return res.status(400).json("City doesn't exists");
+      }
+    }
+
     if (name) {
       await Shop.updateMany({area:id}, {$set: {areaName: name}})
       await Shop.updateMany({prevArea:id}, {$set: {prevAreaName: name}})
     }
 
-    const area = await Area.findByIdAndUpdate(id, { name: name.trim(), areas, distributor: dist_trimmed, updatedBy: req.user.username, updatedAt: Date.now()}, { new: true });
+    let query = { name: name.trim(), areas, distributor: dist_trimmed, updatedBy: req.user.username, updatedAt: Date.now()}
+    if (city){
+      query.city = city
+    }
+    const area = await Area.findByIdAndUpdate(id, query , { new: true });
     
+    if (prevCity){
+      await City.updateOne(
+        { _id: prevCity },
+        { $pull: { areas: area._id } }
+      );
+    }
+    if (city){
+      await City.updateOne(
+        { _id: city },
+        { $push: { areas: area._id } }
+      );
+
+    }
     if (!area) return res.status(404).json("Area not found");
 
     res.status(200).json({"message": "Route updated successfully"});
@@ -66,7 +115,24 @@ const deleteArea = async (req, res) => {
       return res.status(400).json("Cannot delete area with shops");
     }
 
+    // remove from city
+    if (area.city){
+      const cityExists = await City.findOne({_id: area.city})
+      if (!cityExists){
+        return res.status(400).json("City doesn't exists");
+      }
+      cityExists.areas = cityExists.areas.filter(
+        id => id.toString() !== area._id.toString()
+      );
+      await cityExists.save();
+      
+      
+    }
+      
+
+    // delete area
     await Area.findByIdAndUpdate(id, {deleted: true, deletedBy: req.user.username, deletedAt: Date.now()});
+    
     res.status(200).json( {"message": "Route deleted"} );
   } catch (error) {
     res.status(500).json(error.message);
@@ -82,7 +148,7 @@ const getAllAreas = async (req, res) => {
       query["distributor"] = dist_username
     }
 
-    const areas = await Area.find(query, 'name'); 
+    const areas = await Area.find(query, 'name');
 
     res.status(200).json(areas);
   } catch (error) {
@@ -98,7 +164,7 @@ const getAreas = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const totalCount = await Area.countDocuments({deleted: { $in: [false, null] }});
-    const areas = await Area.find({deleted: { $in: [false, null] }}).sort({ createdAt: -1 }).skip(skip).limit(limit);
+    const areas = await Area.find({deleted: { $in: [false, null] }}).populate('city', 'name _id').sort({ createdAt: -1 }).skip(skip).limit(limit);
     
     res.status(200).json({
       areas,

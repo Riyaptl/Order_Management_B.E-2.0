@@ -4,6 +4,7 @@ const Area = require("../models/Area");
 const Shop = require("../models/Shop");
 const User = require("../models/User");
 const { Parser } = require("json2csv");
+const City = require("../models/City");
 
 const productList = [
   "Cranberry 50g", "Dryfruits 50g", "Peanuts 50g", "Mix seeds 50g", "Blueberry 50g",
@@ -278,8 +279,6 @@ const createOrder = async (req, res) => {
     await order.save();
     res.status(201).json({ "message": "Order created successfully" });
   } catch (error) {
-    console.log(error);
-
     res.status(500).json(error.message);
   }
 };
@@ -327,8 +326,7 @@ const softDeleteOrder = async (req, res) => {
 
     res.status(200).json("Order deleted successfully");
   } catch (error) {
-    console.log(error);
-    
+
     res.status(500).json(error.message);
   }
 };
@@ -434,8 +432,6 @@ const statusOrder = async (req, res) => {
 
     res.status(200).json("Order status updated successfully");
   } catch (error) {
-    console.log(error);
-
     res.status(500).json(error.message);
   }
 };
@@ -443,6 +439,7 @@ const statusOrder = async (req, res) => {
 // date query
 const getDateQuery = (query, completeData, date = "", month) => {
   try {
+      
     if (!completeData && !date) {
 
       const startOfToday = new Date();
@@ -453,6 +450,7 @@ const getDateQuery = (query, completeData, date = "", month) => {
 
       query.createdAt = { $gte: startOfToday, $lte: endOfToday };
     } else if (completeData) {
+  
       const istOffsetMs = 5.5 * 60 * 60 * 1000;
       const now = new Date();
       const startOfMonthIST = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1, 0, 0, 0) - istOffsetMs);
@@ -460,6 +458,7 @@ const getDateQuery = (query, completeData, date = "", month) => {
 
       query.createdAt = { $gte: startOfMonthIST, $lte: endOfMonthIST };
     } else if (date) {
+
       const istOffsetMs = 5.5 * 60 * 60 * 1000;
       const [year, month, day] = date.split("-").map(Number);
       const istStartofDay = new Date(Date.UTC(year, month - 1, day, 0, 0, 0) - istOffsetMs);
@@ -520,24 +519,38 @@ const paginatedOrders = async (page, limit, query) => {
 // orders  by area
 const getOrdersByArea = async (req, res) => {
   try {
-    const { areaId, completeData = false, page = 1, limit = 20, placedOrders, month } = req.body;
+    const { areaId, completeData = false, page = 1, limit = 60, placedOrders, month, city, date } = req.body;
 
-    if (!areaId) {
+    if (!areaId && !city) {
       return res.status(400).json({ message: "Area parameter is required" });
     }
 
     if (completeData && month) {
       return res.status(404).jaon({ message: "Invalid Entry" })
     }
+    
+    if (areaId && city) {
+      return res.status(404).jaon({ message: "Invalid Entry" })
+    }
 
     // Build query
-    const query_prev = { areaId, deleted: false, status: { $ne: 'canceled' } };
+    const query_prev = { deleted: false, status: { $ne: 'canceled' } };
+    if (areaId){
+      query_prev.areaId = areaId
+    }
+    if (city){
+      const cityExists = await City.findOne({_id: city})
+      if (!cityExists){
+        return res.status(500).json({message: "City not found"})
+      }
+      query_prev.areaId = {$in: cityExists.areas}
+    }
     if (req.user.role === "sr") {
       query_prev.placedBy = req.user.username
     }
 
-    const query = getDateQuery(query_prev, completeData, "", month)
-
+    const query = getDateQuery(query_prev, completeData, date, month)
+    
     if (placedOrders) {
       query["products"] = { $ne: {} };
     } else {
@@ -554,6 +567,7 @@ const getOrdersByArea = async (req, res) => {
       totalCount: totalOrders
     });
   } catch (error) {
+
     res.status(500).json({ message: error.message });
   }
 };
@@ -561,7 +575,7 @@ const getOrdersByArea = async (req, res) => {
 // 2. get orders- placed by
 const getOrdersBySR = async (req, res) => {
   try {
-    const { username, completeData = false, page = 1, limit = 60, placedOrders, month } = req.body;
+    const { username, completeData = false, page = 1, limit = 60, placedOrders, month, date } = req.body;
 
     if (!username) {
       return res.status(404).json("SR name is required");
@@ -583,7 +597,7 @@ const getOrdersBySR = async (req, res) => {
       query_prev.placedBy = { $in: users }
     }
 
-    const query = getDateQuery(query_prev, completeData, "", month)
+    const query = getDateQuery(query_prev, completeData, date, month)
 
     if (placedOrders) {
       query["products"] = { $ne: {} };
@@ -882,7 +896,7 @@ const buildReportQuery = async (dist_username, placed_username, completeData, da
 // get orders for sales report
 const getSalesReport = async (req, res) => {
   try {
-    const { dist_username, completeData = false, placed_username, date, month, areaId } = req.body;
+    const { dist_username, completeData = false, placed_username, date, month, areaId, city } = req.body;
 
     if (completeData && date) {
       return res.status(404).jaon({ message: "Invalid Entry" })
@@ -892,10 +906,21 @@ const getSalesReport = async (req, res) => {
       return res.status(404).jaon({ message: "Invalid Entry" })
     }
 
+    if (city && areaId) {
+      return res.status(404).jaon({ message: "Invalid Entry" })
+    }
+
     const query = await buildReportQuery(dist_username, placed_username, completeData, date, month)
 
     if (areaId) {
       query.areaId = areaId
+    }
+    if (city){
+      const cityExists = await City.findOne({_id: city})
+      if (!cityExists){
+        return res.status(500).json({message: "City not found"})
+      }
+      query.areaId = {$in: cityExists.areas}
     }
 
     // For Order type
@@ -933,7 +958,7 @@ const getSalesReport = async (req, res) => {
 // get orders for sales report
 const getCancelledReport = async (req, res) => {
   try {
-    const { dist_username, completeData = false, placed_username, date, month } = req.body;
+    const { dist_username, completeData = false, placed_username, date, month, areaId, city } = req.body;
 
     if (completeData && date) {
       return res.status(404).jaon({ message: "Invalid Entry" })
@@ -944,6 +969,17 @@ const getCancelledReport = async (req, res) => {
     }
 
     const query = await buildReportQuery(dist_username, placed_username, completeData, date, month)
+
+    if (areaId) {
+      query.areaId = areaId
+    }
+    if (city){
+      const cityExists = await City.findOne({_id: city})
+      if (!cityExists){
+        return res.status(500).json({message: "City not found"})
+      }
+      query.areaId = {$in: cityExists.areas}
+    }
 
     // For Order type
     const order_query = {
