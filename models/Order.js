@@ -62,6 +62,11 @@ const orderSchema = new mongoose.Schema({
       message: "One or more rates are invalid"
     }
   },
+  gst: {
+    type: String,
+    default: "5",
+    required: true,
+  },
   return_products: {
     type: Map,
     of: Number,

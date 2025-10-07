@@ -722,7 +722,7 @@ const getReport = async (orders) => {
       "Hazelnut & Blueberries 55g", "Roasted Almonds & Pink Salt 55g", "Kiwi & Pineapple 55g", "Ginger & Cinnamon 55g", "Pistachio & Black Raisin 55g", "Dates & Raisin 55g"
     ];
 
-    const amountTotal = [80, 99, 45, 50, 350, 310, 285, 310, 270, 300, 350]; // PRICE, MRP
+    const amountTotal = [80, 90, 45, 45, 350, 310, 285, 310, 270, 300, 350]; // PRICE, MRP
     const productTotals = {};
     const overallTotals = {};
 
@@ -734,6 +734,7 @@ const getReport = async (orders) => {
       const orderProducts = order.products || {};
       const orderTotal = order.total || {};
       const rate = order.rate || { "25g": 28, "50g": 40, "55g": 40, "gift": 40 };
+      const gst = 1 + parseFloat(order.gst) / 100
       
       keysToReport.forEach(key => {
         if (orderProducts.get(key)) {
@@ -758,7 +759,7 @@ const getReport = async (orders) => {
         else if (item.includes("55g")) marginPercent = rate.get('55g') || 0
         else if (item.toLowerCase().includes("gift")) marginPercent = rate.get("gift") || 0
 
-        const landingPrice = (mrp - (mrp * marginPercent / 100)) / 1.18;
+        const landingPrice = (mrp - (mrp * marginPercent / 100)) / gst;
         
         
         landingPrices.push(parseFloat(landingPrice.toFixed(2)))
@@ -792,7 +793,7 @@ const getReturnReport = async (orders) => {
       "Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g", "Gift box", "Hazelnut & Blueberries 55g", "Roasted Almonds & Pink Salt 55g", "Kiwi & Pineapple 55g", "Ginger & Cinnamon 55g", "Pistachio & Black Raisin 55g", "Dates & Raisin 55g"
     ];
 
-    const amountTotal = [80, 99, 45, 50, 350, 310, 285, 310, 270, 300, 350]; // PRICE, MRP
+    const amountTotal = [80, 90, 45, 45, 350, 310, 285, 310, 270, 300, 350]; // PRICE, MRP
     const productTotals = {};
     const overallTotals = {};
 
@@ -804,6 +805,7 @@ const getReturnReport = async (orders) => {
       let orderProducts = {};
       let orderTotal = {};
       const rate = order.rate || { "25g": 0, "50g": 0, "55g": 0, "gift": 0 };
+      const gst = 1 + parseFloat(order.gst) / 100
 
       if (order.type === "return") {
         orderProducts = order.products || {};
@@ -837,7 +839,7 @@ const getReturnReport = async (orders) => {
         else if (item.includes("55g")) marginPercent = rate.get('55g') || 0
         else if (item.toLowerCase().includes("gift")) marginPercent = rate.get("gift") || 0
 
-        const landingPrice = (mrp - (mrp * marginPercent / 100)) / 1.18;
+        const landingPrice = (mrp - (mrp * marginPercent / 100)) / gst;
 
         landingPrices.push(parseFloat(landingPrice.toFixed(2)))
         const qty = orderTotal.get(item) || 0;
@@ -900,14 +902,14 @@ const getSalesReport = async (req, res) => {
     const order_query = {
       ...query, type: "order", status: { $ne: "canceled" } 
     }
-    const order_orders = await Order.find(order_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1, rate: 1 })
+    const order_orders = await Order.find(order_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1, rate: 1, gst: 1 })
     const saleReport = await getReport(order_orders)
 
     // For replacement type
     const replcement_query = {
       ...query, type: "replacement", status: { $ne: "canceled" } 
     }
-    const replacement_orders = await Order.find(replcement_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1, rate: 1 })
+    const replacement_orders = await Order.find(replcement_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1, rate: 1, gst: 1 })
     const saleReplaceReport = await getReport(replacement_orders)
 
     // For return type
@@ -919,7 +921,7 @@ const getSalesReport = async (req, res) => {
         { status: "partial return" }
       ]
     };
-    const return_orders = await Order.find(return_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1, rate: 1 })
+    const return_orders = await Order.find(return_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1, rate: 1, gst: 1 })
     const saleReturnReport = await getReturnReport(return_orders)
 
     res.status(200).json({ saleReport, saleReplaceReport, saleReturnReport });
@@ -949,7 +951,7 @@ const getCancelledReport = async (req, res) => {
         { status: "canceled" },
         { status: { $ne: "partial return" } }]
     }
-    const order_orders = await Order.find(order_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1, rate: 1 })
+    const order_orders = await Order.find(order_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1, rate: 1, gst: 1 })
     const cancelledReport = await getReport(order_orders)
 
     // For replacement type
@@ -958,7 +960,7 @@ const getCancelledReport = async (req, res) => {
         { status: "canceled" },
         { status: { $ne: "partial return" } }]
     }
-    const replacement_orders = await Order.find(replcement_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1, rate: 1 })
+    const replacement_orders = await Order.find(replcement_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1, rate: 1, gst: 1 })
     const cancelledReplaceReport = await getReport(replacement_orders)
 
     // For return type
@@ -968,7 +970,7 @@ const getCancelledReport = async (req, res) => {
         { status: "partial return" }
       ]
     }
-    const return_orders = await Order.find(return_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1, rate: 1 })
+    const return_orders = await Order.find(return_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1, rate: 1, gst: 1 })
     const cancelledReturnReport = await getReturnReport(return_orders)
 
     res.status(200).json({ cancelledReport, cancelledReplaceReport, cancelledReturnReport });
