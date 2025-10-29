@@ -164,22 +164,22 @@ const dailyCallsReport = async (req, res) => {
 // };
 
 //   const orders = await Order.find({ deleted: false, location: { $exists: false } });
-  
+
 //   for (const order of orders) {
 //     const products = order.products || {};
 //     const total = {};
-    
+
 //     for (const [category, keys] of Object.entries(totalMapping)) {
 //       total[category] = keys.reduce((sum, key) => sum + (products.get(key) || 0), 0);
 //     }
 
 //     order.total = new Map(Object.entries(total));
 //     console.log(total);
-    
+
 //     // await order.save();
 //     // console.log(`Fixed order ${order._id}`);
 //   }
-  
+
 //   console.log('All totals fixed!');
 // }
 
@@ -187,7 +187,7 @@ const dailyCallsReport = async (req, res) => {
 
 const createOrder = async (req, res) => {
   try {
-    let { shopId, areaId, products, rate, placedBy, location, paymentTerms, remarks, orderPlacedBy, type = "order", date } = req.body;
+    let { shopId, areaId, products, existing_products, rate, placedBy, location, paymentTerms, remarks, orderPlacedBy, type = "order", date } = req.body;
 
     const createdBy = req.user.username;
     const finalPlacedBy = placedBy || createdBy
@@ -196,11 +196,11 @@ const createOrder = async (req, res) => {
     const shopExists = await Shop.findOne({ _id: shopId, deleted: { $in: [false, null] } });
     if (!areaExists || !shopExists) return res.status(400).json("Invalid area or shop ID");
 
-    if (!rate){
-      rate = {"25g": 28, "50g": 40, "55g": 40, "gift": 40}
+    if (!rate) {
+      rate = { "25g": 28, "50g": 40, "55g": 40, "gift": 40 }
     }
 
-    let data = { shopId, areaId, placedBy: finalPlacedBy, products, rate, createdBy, location, paymentTerms, remarks, orderPlacedBy, type, createdAt: date }
+    let data = { shopId, areaId, placedBy: finalPlacedBy, products, existing_products, rate, createdBy, location, paymentTerms, remarks, orderPlacedBy, type, createdAt: date }
 
     // Calculate total if products exist
     let total = {}
@@ -245,7 +245,7 @@ const createOrder = async (req, res) => {
         });
       }
       data["total"] = total
-      
+
     } else {
       if (!location) return res.status(400).json("Location not found");
     }
@@ -254,8 +254,8 @@ const createOrder = async (req, res) => {
 
     if (products && Object.keys(products.toObject ? products.toObject() : products).length !== 0) {
 
-      let shopData = { placedBy: finalPlacedBy, products, total, rate, paymentTerms, remarks, orderPlacedBy, createdAt: date, orderId: order._id, type }    
-      
+      let shopData = { placedBy: finalPlacedBy, products, total, existing_products, rate, paymentTerms, remarks, orderPlacedBy, createdAt: date, orderId: order._id, type }
+
       if (!shopExists.orders) {
         shopExists.orders = []
       }
@@ -263,6 +263,39 @@ const createOrder = async (req, res) => {
       // if (shopExists.orders.length > 3) {
       //   shopExists.orders.shift()
       // }
+
+      // Readjust stock
+      // assign stock to existing_products and then
+      // if type = order -> add products to stock
+      // if type = replacement -> dont do anything
+      // if type = return -> remove products from stock
+
+      // --- Readjust stock ---
+      if (!shopExists.stock) {
+        shopExists.stock = new Map();
+      }
+
+      // 1️⃣ Assign stock to existing_products (current stock snapshot)
+      shopExists.stock = new Map(Object.entries(shopData.existing_products || {}));
+
+      // 2️⃣ Adjust based on order type
+      if (type === "order") {
+        // Add ordered products to stock
+        for (const [product, qty] of Object.entries(shopData.products || {})) {
+          const current = shopExists.stock.get(product) || 0;
+          shopExists.stock.set(product, current + qty);
+        }
+
+      } else if (type === "return") {
+        // Subtract returned products from stock
+        for (const [product, qty] of Object.entries(shopData.products || {})) {
+          const current = shopExists.stock.get(product) || 0;
+          const newQty = current - qty;
+          shopExists.stock.set(product, newQty >= 0 ? newQty : 0); // prevent negatives
+        }
+
+      }
+
     }
 
     shopExists.visitedAt = date
@@ -282,6 +315,46 @@ const createOrder = async (req, res) => {
     res.status(500).json(error.message);
   }
 };
+
+const adjustShopStockAfterOrderRemoval = async (shop, removedOrderId) => {
+  
+  // Filter out the removed/canceled order
+  const remainingOrders = shop.orders
+    .filter(o => o.orderId.toString() !== removedOrderId.toString())
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  // Take the latest order (if any)
+  const latestOrder = remainingOrders[0];
+
+  // Reset stock map
+  shop.stock = new Map();
+
+  if (latestOrder) {
+    // Assign stock to latest order's existing_products
+    if (latestOrder.existing_products) {
+      for (const [product, qty] of latestOrder.existing_products.entries()) {
+        shop.stock.set(product, qty);
+      }
+    }
+
+    // Then adjust stock based on type
+    if (latestOrder.type === "order") {
+      for (const [product, qty] of latestOrder.products.entries()) {
+        const current = shop.stock.get(product) || 0;
+        shop.stock.set(product, current + qty);
+      }
+    } else if (latestOrder.type === "return") {
+      for (const [product, qty] of latestOrder.products.entries()) {
+        const current = shop.stock.get(product) || 0;
+        const newQty = current - qty;
+        shop.stock.set(product, newQty >= 0 ? newQty : 0);
+      }
+    }
+  }
+
+  return shop;
+};
+
 
 // 3. Soft Delete Order (Admin only)
 const softDeleteOrder = async (req, res) => {
@@ -322,11 +395,12 @@ const softDeleteOrder = async (req, res) => {
       shopExists.first = true
       shopExists.repeat = false
     }
+
+    await adjustShopStockAfterOrderRemoval(shopExists, order);
     await shopExists.save()
 
     res.status(200).json("Order deleted successfully");
-  } catch (error) {
-
+  } catch (error) {   
     res.status(500).json(error.message);
   }
 };
@@ -342,8 +416,8 @@ const statusOrder = async (req, res) => {
 
       // Only allow update if current status is pending
       // if (order.status === "pending") {
-        // }
-        
+      // }
+
       order.status = status;
       order.canceledReason = reason;
       order.statusUpdatedBy = req.user.username;
@@ -423,6 +497,16 @@ const statusOrder = async (req, res) => {
           targetOrder.return_products = new Map(order.return_products);
           targetOrder.return_total = new Map(order.return_total);
 
+          if (status === "canceled") {
+            shopExists.stock = new Map(order.existing_products)
+          }
+          // if (status === "partial return") {
+          //   shopExists.stock = new Map(Object.entries(order.existing_products || {}));
+          //   for (const [product, qty] of Object.entries(order.products || {})) {
+          //     const current = shopExists.stock.get(product) || 0;
+          //     shopExists.stock.set(product, current + qty);
+          //   }
+          // }
           await shopExists.save();
         }
       }
@@ -439,7 +523,7 @@ const statusOrder = async (req, res) => {
 // date query
 const getDateQuery = (query, completeData, date = "", month) => {
   try {
-      
+
     if (!completeData && !date) {
 
       const startOfToday = new Date();
@@ -450,7 +534,7 @@ const getDateQuery = (query, completeData, date = "", month) => {
 
       query.createdAt = { $gte: startOfToday, $lte: endOfToday };
     } else if (completeData) {
-  
+
       const istOffsetMs = 5.5 * 60 * 60 * 1000;
       const now = new Date();
       const startOfMonthIST = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1, 0, 0, 0) - istOffsetMs);
@@ -528,29 +612,29 @@ const getOrdersByArea = async (req, res) => {
     if (completeData && month) {
       return res.status(404).jaon({ message: "Invalid Entry" })
     }
-    
+
     if (areaId && city) {
       return res.status(404).jaon({ message: "Invalid Entry" })
     }
 
     // Build query
     const query_prev = { deleted: false, status: { $ne: 'canceled' } };
-    if (areaId){
+    if (areaId) {
       query_prev.areaId = areaId
     }
-    if (city){
-      const cityExists = await City.findOne({_id: city})
-      if (!cityExists){
-        return res.status(500).json({message: "City not found"})
+    if (city) {
+      const cityExists = await City.findOne({ _id: city })
+      if (!cityExists) {
+        return res.status(500).json({ message: "City not found" })
       }
-      query_prev.areaId = {$in: cityExists.areas}
+      query_prev.areaId = { $in: cityExists.areas }
     }
     if (req.user.role === "sr") {
       query_prev.placedBy = req.user.username
     }
 
     const query = getDateQuery(query_prev, completeData, date, month)
-    
+
     if (placedOrders) {
       query["products"] = { $ne: {} };
     } else {
@@ -749,7 +833,7 @@ const getReport = async (orders) => {
       const orderTotal = order.total || {};
       const rate = order.rate || { "25g": 28, "50g": 40, "55g": 40, "gift": 40 };
       const gst = 1 + parseFloat(order.gst) / 100
-      
+
       keysToReport.forEach(key => {
         if (orderProducts.get(key)) {
           productTotals[key] += orderProducts.get(key);
@@ -774,15 +858,15 @@ const getReport = async (orders) => {
         else if (item.toLowerCase().includes("gift")) marginPercent = rate.get("gift") || 0
 
         const landingPrice = (mrp - (mrp * marginPercent / 100)) / gst;
-        
-        
+
+
         landingPrices.push(parseFloat(landingPrice.toFixed(2)))
-        
+
         const qty = orderTotal.get(item) || 0;
         grandTotal += landingPrice * qty;
       }
-      }
-    const amount =  grandTotal.toFixed(2)
+    }
+    const amount = grandTotal.toFixed(2)
 
     return { productTotals, overallTotals, amount };
   } catch (error) {
@@ -846,7 +930,7 @@ const getReturnReport = async (orders) => {
       for (let i = 0; i < totalList.length; i++) {
         const item = totalList[i];
         const mrp = amountTotal[i];
-        
+
         let marginPercent = 0;
         if (item.includes("25g")) marginPercent = rate.get('25g') || 0
         else if (item.includes("50g")) marginPercent = rate.get('50g') || 0
@@ -861,7 +945,7 @@ const getReturnReport = async (orders) => {
       }
     }
 
-   const amount =  grandTotal.toFixed(2) 
+    const amount = grandTotal.toFixed(2)
     return { productTotals, overallTotals, amount };
   } catch (error) {
     return error;
@@ -915,24 +999,24 @@ const getSalesReport = async (req, res) => {
     if (areaId) {
       query.areaId = areaId
     }
-    if (city){
-      const cityExists = await City.findOne({_id: city})
-      if (!cityExists){
-        return res.status(500).json({message: "City not found"})
+    if (city) {
+      const cityExists = await City.findOne({ _id: city })
+      if (!cityExists) {
+        return res.status(500).json({ message: "City not found" })
       }
-      query.areaId = {$in: cityExists.areas}
+      query.areaId = { $in: cityExists.areas }
     }
 
     // For Order type
     const order_query = {
-      ...query, type: "order", status: { $ne: "canceled" } 
+      ...query, type: "order", status: { $ne: "canceled" }
     }
     const order_orders = await Order.find(order_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1, rate: 1, gst: 1 })
     const saleReport = await getReport(order_orders)
 
     // For replacement type
     const replcement_query = {
-      ...query, type: "replacement", status: { $ne: "canceled" } 
+      ...query, type: "replacement", status: { $ne: "canceled" }
     }
     const replacement_orders = await Order.find(replcement_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1, rate: 1, gst: 1 })
     const saleReplaceReport = await getReport(replacement_orders)
@@ -973,12 +1057,12 @@ const getCancelledReport = async (req, res) => {
     if (areaId) {
       query.areaId = areaId
     }
-    if (city){
-      const cityExists = await City.findOne({_id: city})
-      if (!cityExists){
-        return res.status(500).json({message: "City not found"})
+    if (city) {
+      const cityExists = await City.findOne({ _id: city })
+      if (!cityExists) {
+        return res.status(500).json({ message: "City not found" })
       }
-      query.areaId = {$in: cityExists.areas}
+      query.areaId = { $in: cityExists.areas }
     }
 
     // For Order type

@@ -42,6 +42,16 @@ const ordersSchema = new mongoose.Schema({
       message: "One or more total names are invalid"
     }
   },
+  existing_products: {
+    type: Map,
+    of: Number,
+    validate: {
+      validator: function (value) {
+        return [...value.keys()].every(key => productList.includes(key));
+      },
+      message: "One or more product names are invalid"
+    }
+  },
   rate:{
     type: Map,
     of: Number,
@@ -196,7 +206,17 @@ const ShopSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  orders: [ordersSchema]
+  orders: [ordersSchema],
+  stock: {
+    type: Map,
+    of: Number,
+    validate: {
+      validator: function (value) {
+        return [...value.keys()].every(key => productList.includes(key));
+      },
+      message: "One or more product names are invalid"
+    }
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model("Shop", ShopSchema);
