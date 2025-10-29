@@ -317,7 +317,7 @@ const createOrder = async (req, res) => {
 };
 
 const adjustShopStockAfterOrderRemoval = async (shop, removedOrderId) => {
-  
+
   // Filter out the removed/canceled order
   const remainingOrders = shop.orders
     .filter(o => o.orderId.toString() !== removedOrderId.toString())
@@ -336,10 +336,10 @@ const adjustShopStockAfterOrderRemoval = async (shop, removedOrderId) => {
         shop.stock.set(product, qty);
       }
     }
-     if (latestOrder.status === "canceled"){
+    if (latestOrder.status === "canceled") {
       return shop
-     }
-     
+    }
+
     // Then adjust stock based on type
     if (latestOrder.type === "order") {
       for (const [product, qty] of latestOrder.products.entries()) {
@@ -403,7 +403,7 @@ const softDeleteOrder = async (req, res) => {
     await shopExists.save()
 
     res.status(200).json("Order deleted successfully");
-  } catch (error) {   
+  } catch (error) {
     res.status(500).json(error.message);
   }
 };
@@ -501,7 +501,14 @@ const statusOrder = async (req, res) => {
           targetOrder.return_total = new Map(order.return_total);
 
           if (status === "canceled") {
-            shopExists.stock = new Map(order.existing_products)
+            // Check if the canceled order is the latest one
+            const latestOrder = shopExists.orders
+              .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+
+            // Only update stock if the canceled order is the latest
+            if (latestOrder && latestOrder._id.toString() === order._id.toString()) {
+              shopExists.stock = new Map(order.existing_products);
+            }
           }
           // if (status === "partial return") {
           //   shopExists.stock = new Map(Object.entries(order.existing_products || {}));
