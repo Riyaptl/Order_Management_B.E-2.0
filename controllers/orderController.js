@@ -504,9 +504,9 @@ const statusOrder = async (req, res) => {
             // Check if the canceled order is the latest one
             const latestOrder = shopExists.orders
               .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
-
+              
             // Only update stock if the canceled order is the latest
-            if (latestOrder && latestOrder._id.toString() === order._id.toString()) {
+            if (latestOrder && latestOrder.orderId.toString() === order._id.toString()) {
               shopExists.stock = new Map(order.existing_products);
             }
           }
@@ -526,6 +526,8 @@ const statusOrder = async (req, res) => {
 
     res.status(200).json("Order status updated successfully");
   } catch (error) {
+    console.log(error);
+    
     res.status(500).json(error.message);
   }
 };
