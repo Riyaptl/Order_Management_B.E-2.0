@@ -320,8 +320,7 @@ const adjustShopStockAfterOrderRemoval = async (shop, removedOrderId) => {
   
   // Filter out the removed/canceled order
   const remainingOrders = shop.orders
-    .filter(o => o.orderId.toString() !== removedOrderId.toString() &&
-        o.status !== "canceled")
+    .filter(o => o.orderId.toString() !== removedOrderId.toString())
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   // Take the latest order (if any)
@@ -337,7 +336,10 @@ const adjustShopStockAfterOrderRemoval = async (shop, removedOrderId) => {
         shop.stock.set(product, qty);
       }
     }
-
+     if (latestOrder.status === "canceled"){
+      return shop
+     }
+     
     // Then adjust stock based on type
     if (latestOrder.type === "order") {
       for (const [product, qty] of latestOrder.products.entries()) {
