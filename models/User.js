@@ -23,6 +23,11 @@ const UserSchema = new Schema({
         enum: ['sr', 'admin', "distributor", "me", "tl"], 
         default: 'sr' 
     },
+    target: [
+        {
+        month: { type: String },
+        value: { type: Number }
+    }],
     otp: {
         type: String
     },

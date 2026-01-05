@@ -533,7 +533,7 @@ const statusOrder = async (req, res) => {
 };
 
 // date query
-const getDateQuery = (query, completeData, date = "", month) => {
+const getDateQuery = (query, completeData, date = "", month, year) => {
   try {
 
     if (!completeData && !date) {
@@ -563,9 +563,9 @@ const getDateQuery = (query, completeData, date = "", month) => {
     }
 
     // set month passed
-    if (month) {
-      const now = new Date();
-      const year = now.getFullYear();
+    if (month && year) {
+      // const now = new Date();
+      // const year = now.getFullYear();
 
       // Step 2: Convert month name (e.g., "June") to month number (0-indexed)
       const monthIndex = new Date(`${month} 1, ${year}`).getMonth();
@@ -965,7 +965,7 @@ const getReturnReport = async (orders) => {
 };
 
 
-const buildReportQuery = async (dist_username, placed_username, completeData, date, month) => {
+const buildReportQuery = async (dist_username, placed_username, completeData, date, month, year) => {
   try {
     // Build query
     const query_prev = { deleted: false, products: { $ne: {} } };
@@ -981,7 +981,7 @@ const buildReportQuery = async (dist_username, placed_username, completeData, da
     }
 
     // Date query
-    const query = await getDateQuery(query_prev, completeData, date, month)
+    const query = await getDateQuery(query_prev, completeData, date, month, year)
 
     return query
   } catch (error) {
@@ -992,7 +992,7 @@ const buildReportQuery = async (dist_username, placed_username, completeData, da
 // get orders for sales report
 const getSalesReport = async (req, res) => {
   try {
-    const { dist_username, completeData = false, placed_username, date, month, areaId, city } = req.body;
+    const { dist_username, completeData = false, placed_username, date, month, year, areaId, city } = req.body;
 
     if (completeData && date) {
       return res.status(404).jaon({ message: "Invalid Entry" })
@@ -1006,7 +1006,7 @@ const getSalesReport = async (req, res) => {
       return res.status(404).jaon({ message: "Invalid Entry" })
     }
 
-    const query = await buildReportQuery(dist_username, placed_username, completeData, date, month)
+    const query = await buildReportQuery(dist_username, placed_username, completeData, date, month, year)
 
     if (areaId) {
       query.areaId = areaId
@@ -1023,6 +1023,7 @@ const getSalesReport = async (req, res) => {
     const order_query = {
       ...query, type: "order", status: { $ne: "canceled" }
     }
+    
     const order_orders = await Order.find(order_query, { products: 1, total: 1, return_products: 1, return_total: 1, type: 1, status: 1, rate: 1, gst: 1 })
     const saleReport = await getReport(order_orders)
 
@@ -1054,7 +1055,7 @@ const getSalesReport = async (req, res) => {
 // get orders for sales report
 const getCancelledReport = async (req, res) => {
   try {
-    const { dist_username, completeData = false, placed_username, date, month, areaId, city } = req.body;
+    const { dist_username, completeData = false, placed_username, date, month, year, areaId, city } = req.body;
 
     if (completeData && date) {
       return res.status(404).jaon({ message: "Invalid Entry" })
@@ -1064,7 +1065,7 @@ const getCancelledReport = async (req, res) => {
       return res.status(404).jaon({ message: "Invalid Entry" })
     }
 
-    const query = await buildReportQuery(dist_username, placed_username, completeData, date, month)
+    const query = await buildReportQuery(dist_username, placed_username, completeData, date, month, year)
 
     if (areaId) {
       query.areaId = areaId
