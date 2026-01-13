@@ -159,12 +159,19 @@ const getAllAreas = async (req, res) => {
 // 5. Read All Area with Pagination
 const getAreas = async (req, res) => {
   try {
+    const {dist_username} = req.body
     const page = parseInt(req.query.page) || 1; 
     const limit = 24;
     const skip = (page - 1) * limit;
 
     const totalCount = await Area.countDocuments({deleted: { $in: [false, null] }});
-    const areas = await Area.find({deleted: { $in: [false, null] }}).populate('city', 'name _id').sort({ createdAt: -1 }).skip(skip).limit(limit);
+
+    let query = {deleted: { $in: [false, null] }}
+    if (dist_username){
+      query["distributor"] = dist_username
+    }
+    
+    const areas = await Area.find(query).populate('city', 'name _id').sort({ createdAt: -1 }).skip(skip).limit(limit);
     
     res.status(200).json({
       areas,

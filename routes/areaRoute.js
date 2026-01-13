@@ -14,7 +14,7 @@ const checkRole = require("../middlewares/RoleAuth");
 const router = express.Router();
 
 // Admin-only
-router.get("/admin", authenticateUser, checkRole("admin", "tl"), getAreas);
+router.post("/admin", authenticateUser, checkRole("admin", "tl"), getAreas);
 router.post("/", authenticateUser, checkRole("admin", "tl"), createArea);
 router.post("/:id", authenticateUser, checkRole("admin", "tl"), updateAreaName);
 router.post("/delete/one/:id", authenticateUser, checkRole("admin", "tl"), deleteArea);
