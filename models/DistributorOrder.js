@@ -76,7 +76,7 @@ const distributorOrderSchema = new mongoose.Schema({
     },
     companyRemarks: {
       type: String
-    }
+    },
   }
 ],
   gst: {

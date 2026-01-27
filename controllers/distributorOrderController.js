@@ -97,11 +97,11 @@ const createDistributorOrder = async (req, res) => {
   }
 };
 
-//  update status
+// update status (multiple orders)
 const updateDistributorOrder = async (req, res) => {
   try {
-    const { id } = req.params;
     const {
+      ids, // ARRAY OF IDS
       status,
       canceledReason,
       ETD,
@@ -111,92 +111,100 @@ const updateDistributorOrder = async (req, res) => {
       billAttached
     } = req.body;
 
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: "Order ids are required" });
+    }
+
     if (!status) {
-      return res.status(400).json({ message: "Required fields are missing" });
+      return res.status(400).json({ message: "Status is required" });
     }
 
     if (status === "dispatched" && !ETD) {
       return res.status(400).json({ message: "ETD is required for dispatch" });
     }
 
-    const order = await DistributorOrder.findOne({
-      _id: id,
+    const orders = await DistributorOrder.find({
+      _id: { $in: ids },
       deleted: false
     });
 
-    if (!order) {
-      return res.status(404).json({ message: "Distributor order not found" });
+    console.log(orders);
+    
+    if (orders.length === 0) {
+      return res.status(404).json({ message: "No distributor orders found" });
     }
 
-    if (status === "delivered" && order.status !== "dispatched") {
-      return res.status(400).json({
-        message: "Order cannot be marked as delivered unless it has been dispatched"
-      });
-    }
+    const totalMapping = {
+      "Regular 50g": ["Cranberry 50g", "Dryfruits 50g", "Peanuts 50g", "Mix seeds 50g", "Blueberry 50g", "Hazelnut 50g"],
+      "Coffee 50g": ["Classic Coffee 50g", "Dark Coffee 50g", "Intense Coffee 50g", "Toxic Coffee 50g"],
+      "Regular 25g": ["Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g", "Orange 25g", "Mint 25g", "Blueberry 25g", "Hazelnut 25g"],
+      "Coffee 25g": ["Classic Coffee 25g", "Dark Coffee 25g", "Intense Coffee 25g", "Toxic Coffee 25g"],
+      "Gift box": ["Gift box"],
+      "Hazelnut & Blueberries 55g": ["Hazelnut & Blueberries 55g"],
+      "Roasted Almonds & Pink Salt 55g": ["Roasted Almonds & Pink Salt 55g"],
+      "Kiwi & Pineapple 55g": ["Kiwi & Pineapple 55g"],
+      "Ginger & Cinnamon 55g": ["Ginger & Cinnamon 55g"],
+      "Pistachio & Black Raisin 55g": ["Pistachio & Black Raisin 55g"],
+      "Dates & Raisin 55g": ["Dates & Raisin 55g"]
+    };
 
-    /* ---------- Delivered products & totals ---------- */
-    if (status === "dispatched" && delivered_products) {
-      const totalMapping = {
-        "Regular 50g": ["Cranberry 50g", "Dryfruits 50g", "Peanuts 50g", "Mix seeds 50g", "Blueberry 50g", "Hazelnut 50g"],
-        "Coffee 50g": ["Classic Coffee 50g", "Dark Coffee 50g", "Intense Coffee 50g", "Toxic Coffee 50g"],
-        "Regular 25g": ["Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g", "Orange 25g", "Mint 25g", "Blueberry 25g", "Hazelnut 25g"],
-        "Coffee 25g": ["Classic Coffee 25g", "Dark Coffee 25g", "Intense Coffee 25g", "Toxic Coffee 25g"],
-        "Gift box": ["Gift box"],
-        "Hazelnut & Blueberries 55g": ["Hazelnut & Blueberries 55g"],
-        "Roasted Almonds & Pink Salt 55g": ["Roasted Almonds & Pink Salt 55g"],
-        "Kiwi & Pineapple 55g": ["Kiwi & Pineapple 55g"],
-        "Ginger & Cinnamon 55g": ["Ginger & Cinnamon 55g"],
-        "Pistachio & Black Raisin 55g": ["Pistachio & Black Raisin 55g"],
-        "Dates & Raisin 55g": ["Dates & Raisin 55g"]
-      };
+    for (const order of orders) {
 
-      const delivered_total = {};
-      Object.keys(totalMapping).forEach(category => delivered_total[category] = 0);
-
-      for (const [category, keys] of Object.entries(totalMapping)) {
-        keys.forEach(key => {
-          if (delivered_products[key]) {
-            delivered_total[category] += delivered_products[key];
-          }
+      if (status === "delivered" && order.status !== "dispatched") {
+        return res.status(400).json({
+          message: `Order ${order._id} must be dispatched before delivery`
         });
       }
 
-      // Push a new delivery entry into the array
-      order.delivered = order.delivered || [];
-      order.delivered.push({
-        date: new Date(ETD),
-        products: delivered_products,
-        total: delivered_total,
-        billAttached,
-        companyRemarks
-      });
-    }
+      /* ---------- Delivered products & totals ---------- */
+      if (status === "dispatched" && delivered_products) {
+        const delivered_total = {};
+        Object.keys(totalMapping).forEach(c => delivered_total[c] = 0);
 
-    // Update order status
-    order.status = status;
-    order.statusUpdatedBy = req.user.username;
-    order.statusUpdatedAt = new Date();
-    order.companyRemarks = companyRemarks
+        for (const [category, keys] of Object.entries(totalMapping)) {
+          keys.forEach(key => {
+            if (delivered_products[key]) {
+              delivered_total[category] += delivered_products[key];
+            }
+          });
+        }
 
-    if (canceledReason) {
-      order.canceledReason = canceledReason;
-    }
-    if (ETD) {
-      order.ETD.push(new Date(ETD));
-    }
+        order.delivered = order.delivered || [];
+        order.delivered.push({
+          date: new Date(ETD),
+          products: delivered_products,
+          total: delivered_total,
+          billAttached,
+          companyRemarks
+        });
+      }
 
-    await order.save();
+      /* ---------- Status update ---------- */
+      order.status = status;
+      order.statusUpdatedBy = req.user.username;
+      order.statusUpdatedAt = new Date();
+      order.companyRemarks = companyRemarks || order.companyRemarks;
+
+      if (canceledReason) {
+        order.canceledReason = canceledReason;
+      }
+
+      if (ETD) {
+        order.ETD.push(new Date(ETD));
+      }
+
+      await order.save();
+    }
 
     return res.status(200).json({
-      message: "Distributor order updated successfully"
+      message: `${orders.length} distributor orders updated successfully`
     });
 
   } catch (error) {
     console.error("Update Distributor Order Error:", error);
-    res.status(500).json(error.message);
+    res.status(500).json({ message: error.message });
   }
 };
-
 
 //  update status
 const deliveredDistributorOrder = async (req, res) => {

@@ -15,7 +15,7 @@ const router = express.Router();
 // Admin-only
 router.post("/orders/read", authenticateUser, readDistributorOrders);
 router.post("/", authenticateUser, createDistributorOrder);
-router.post("/:id", authenticateUser, updateDistributorOrder);
+router.post("/status", authenticateUser, updateDistributorOrder);
 // router.post("/deliever/:id", authenticateUser, deliveredDistributorOrder);
 router.post("/delete/:id", authenticateUser, checkRole("admin"), deleteDistributorOrder);
 
