@@ -14,18 +14,9 @@ const totalList = [
   "Hazelnut & Blueberries 55g", "Roasted Almonds & Pink Salt 55g", "Kiwi & Pineapple 55g", "Ginger & Cinnamon 55g", "Pistachio & Black Raisin 55g", "Dates & Raisin 55g"
 ];
 
-const rate = ["25g", "50g", "55g", "gift"]
-
-
-const orderSchema = new mongoose.Schema({
-  shopId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Shop",
-    required: true
-  },
-  areaId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Shop",
+const distributorOrderSchema = new mongoose.Schema({
+  distributor: {
+    type: String,
     required: true
   },
   placedBy: {
@@ -52,63 +43,39 @@ const orderSchema = new mongoose.Schema({
       message: "One or more total names are invalid"
     }
   },
-   existing_products: {
-    type: Map,
-    of: Number,
-    validate: {
-      validator: function (value) {
-        return [...value.keys()].every(key => productList.includes(key));
-      },
-      message: "One or more product names are invalid"
+  delivered: [
+  {
+    date: {
+      type: Date,
+      required: true,
+      default: Date.now
+    },
+    products: {
+      type: Map,
+      of: Number,
+      validate: {
+        validator: function(value) {
+          return [...value.keys()].every(key => productList.includes(key));
+        },
+        message: "One or more product names are invalid"
+      }
+    },
+    total: {
+      type: Map,
+      of: Number,
+      validate: {
+        validator: function(value) {
+          return [...value.keys()].every(key => totalList.includes(key));
+        },
+        message: "One or more total names are invalid"
+      }
     }
-  },
-  rate:{
-    type: Map,
-    of: Number,
-    validate: {
-      validator: function (value) {
-        return [...value.keys()].every(key => rate.includes(key));
-      },
-      message: "One or more rates are invalid"
-    }
-  },
+  }
+],
   gst: {
     type: String,
     default: "5",
     required: true,
-  },
-  return_products: {
-    type: Map,
-    of: Number,
-    validate: {
-      validator: function (value) {
-        return [...value.keys()].every(key => productList.includes(key));
-      },
-      message: "One or more product names are invalid"
-    }
-  },
-  return_total:{
-    type: Map,
-    of: Number,
-    validate: {
-      validator: function (value) {
-        return [...value.keys()].every(key => totalList.includes(key));
-      },
-      message: "One or more total names are invalid"
-    }
-  },
-  location: {
-    type: {
-        latitude: Number,
-        longitude: Number
-    }
-  },
-  paymentTerms: {
-    type: String,
-    enum: ["cash", "cheque", "company credit", "sr credit", "distributor credit", ""]
-  },
-  remarks: {
-    type: String
   },
   orderPlacedBy: {
     type: String
@@ -129,9 +96,18 @@ const orderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ["delivered", "pending", "canceled", "partial return"],
+    enum: ["pending", "preparing", "dispatched", "delivered",  "canceled"],
     default: "pending"
   },
+  expected_delivery: [{
+    type: Date
+  }],
+  delievered_on: [{
+    type: Date
+  }],
+  ETD: [{
+    type: Date
+  }],
   statusUpdatedBy: {
     type: String,
   },
@@ -141,15 +117,13 @@ const orderSchema = new mongoose.Schema({
   canceledReason: {
     type: String,
   },
-  type: {
-    type: String,
-    enum: ["order", "replacement", "return"],
-    default: "order"
-  },
   createdAt: {
     type: Date
+  },
+  remarks: {
+    type: String
   }
 });
 // { timestamps: true }
 
-module.exports = mongoose.model("Order", orderSchema);
+module.exports = mongoose.model("DistributorOrderSchema", distributorOrderSchema);
