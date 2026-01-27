@@ -69,6 +69,13 @@ const distributorOrderSchema = new mongoose.Schema({
         },
         message: "One or more total names are invalid"
       }
+    },
+    billAttached: {
+      type: Boolean,
+      default: false
+    },
+    companyRemarks: {
+      type: String
     }
   }
 ],
@@ -121,6 +128,15 @@ const distributorOrderSchema = new mongoose.Schema({
     type: Date
   },
   remarks: {
+    type: String
+  },
+  companyRemarks: {
+    type: String
+  },
+  address: {
+    type: String
+  },
+  contact: {
     type: String
   }
 });

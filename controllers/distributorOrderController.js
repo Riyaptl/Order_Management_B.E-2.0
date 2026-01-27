@@ -11,7 +11,9 @@ const createDistributorOrder = async (req, res) => {
       products,
       expected_delivery,
       orderPlacedBy,
-      remarks
+      remarks,
+      address,
+      contact
     } = req.body;
 
     // Basic required validation
@@ -70,6 +72,8 @@ const createDistributorOrder = async (req, res) => {
       distributor,
       products,
       remarks,
+      address,
+      contact,
       total: total || {},
       gst: "5",
       createdBy: req.user.username,
@@ -102,7 +106,9 @@ const updateDistributorOrder = async (req, res) => {
       canceledReason,
       ETD,
       delivered_products,
-      same_as_products
+      same_as_products,
+      companyRemarks,
+      billAttached
     } = req.body;
 
     if (!status) {
@@ -160,7 +166,9 @@ const updateDistributorOrder = async (req, res) => {
       order.delivered.push({
         date: new Date(ETD),
         products: delivered_products,
-        total: delivered_total
+        total: delivered_total,
+        billAttached,
+        companyRemarks
       });
     }
 
@@ -168,6 +176,7 @@ const updateDistributorOrder = async (req, res) => {
     order.status = status;
     order.statusUpdatedBy = req.user.username;
     order.statusUpdatedAt = new Date();
+    order.companyRemarks = companyRemarks
 
     if (canceledReason) {
       order.canceledReason = canceledReason;
