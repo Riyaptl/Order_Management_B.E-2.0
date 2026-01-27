@@ -127,8 +127,6 @@ const updateDistributorOrder = async (req, res) => {
       _id: { $in: ids },
       deleted: false
     });
-
-    console.log(orders);
     
     if (orders.length === 0) {
       return res.status(404).json({ message: "No distributor orders found" });
@@ -191,6 +189,10 @@ const updateDistributorOrder = async (req, res) => {
 
       if (ETD) {
         order.ETD.push(new Date(ETD));
+      }
+
+      if (status === "delivered"){
+        order.delivered_on = Date.now()
       }
 
       await order.save();

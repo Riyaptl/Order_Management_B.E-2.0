@@ -109,7 +109,7 @@ const distributorOrderSchema = new mongoose.Schema({
   expected_delivery: [{
     type: Date
   }],
-  delievered_on: [{
+  delivered_on: [{
     type: Date
   }],
   ETD: [{
