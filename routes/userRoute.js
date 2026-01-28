@@ -11,7 +11,7 @@ router.post("/srDetails", authenticateUser, authorizeRoles("admin", "tl"), getSR
 router.get("/srs", authenticateUser, authorizeRoles("admin", "tl"), getAllSRs);
 
 // Only admin should access this
-router.get("/dists", authenticateUser, authorizeRoles("admin", "tl"), getAllDists);
+router.get("/dists", authenticateUser, authorizeRoles("admin", "tl", "sr"), getAllDists);
 
 // Assign target - admin access
 router.post("/target", authenticateUser, authorizeRoles("admin"), assignTarget);
