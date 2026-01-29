@@ -23,6 +23,12 @@ const UserSchema = new Schema({
         enum: ['sr', 'admin', "distributor", "me", "tl"], 
         default: 'sr' 
     },
+    address: {
+        type: String
+    },
+    contact: {
+        type: String
+    },
     target: [
         {
         month: { type: String },

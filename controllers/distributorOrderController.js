@@ -5,8 +5,9 @@ const { Parser } = require("json2csv");
 //  Create order
 const createDistributorOrder = async (req, res) => {
   try {
-    const {
+    let {
       distributor,
+      city,
       placedBy,
       products,
       expected_delivery,
@@ -23,6 +24,17 @@ const createDistributorOrder = async (req, res) => {
 
     if (!products || Object.keys(products.toObject ? products.toObject() : products).length === 0) {
       return res.status(400).json({ message: "Products are required" });
+    }
+
+    // get address if not passed from distributor
+    if ((!address || !contact) && distributor !== "other"){
+      const dist = await User.findOne({username: distributor})
+      if (!address){
+        address = dist.address
+      }
+      if (!contact){
+        contact = dist.contact
+      }
     }
 
     // Calculate total if products exist
@@ -70,6 +82,7 @@ const createDistributorOrder = async (req, res) => {
     // Build order payload
     const orderData = {
       distributor,
+      city,
       products,
       remarks,
       address,
@@ -108,7 +121,6 @@ const updateDistributorOrder = async (req, res) => {
       delivered_products,
       same_as_products,
       companyRemarks,
-      billAttached
     } = req.body;
 
     if (!Array.isArray(ids) || ids.length === 0) {
@@ -172,7 +184,6 @@ const updateDistributorOrder = async (req, res) => {
           date: new Date(ETD),
           products: delivered_products,
           total: delivered_total,
-          billAttached,
           companyRemarks
         });
       }
@@ -207,6 +218,51 @@ const updateDistributorOrder = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+const updateDeliveryDetails = async (req, res) => {
+  try {
+    const { id, orderId, ARN, billAttached=false, courier } = req.body;
+
+    if (!id || !orderId || !ARN || !courier) {
+      return res.status(400).json({
+        message: "Missing required fields"
+      });
+    }
+
+    const updateFields = {};
+
+    updateFields["delivered.$.ARN"] = ARN;
+    updateFields["delivered.$.billAttached"] = billAttached;
+    updateFields["delivered.$.courier"] = courier;
+
+    const order = await DistributorOrder.findOneAndUpdate(
+      {
+        _id: id,
+        "delivered._id": orderId,
+        deleted: false
+      },
+      {
+        $set: updateFields
+      },
+      { new: true }
+    );
+
+    if (!order) {
+      return res.status(404).json({
+        message: "Order or delivery entry not found"
+      });
+    }
+
+    return res.status(200).json({
+      message: "Delivery details updated successfully"
+    });
+
+  } catch (error) {
+    console.error("Update Delivery Details Error:", error);
+    res.status(500).json(error.message);
+  }
+};
+
 
 //  update status
 const deliveredDistributorOrder = async (req, res) => {
@@ -320,5 +376,6 @@ module.exports = {
   updateDistributorOrder,
   readDistributorOrders,
   deleteDistributorOrder,
-  deliveredDistributorOrder
+  deliveredDistributorOrder,
+  updateDeliveryDetails
 };

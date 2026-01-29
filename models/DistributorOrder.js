@@ -19,6 +19,10 @@ const distributorOrderSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  city: {
+    type: String,
+    required: true
+  },
   placedBy: {
     type: String,
     required: true
@@ -45,6 +49,10 @@ const distributorOrderSchema = new mongoose.Schema({
   },
   delivered: [
   {
+     _id: {
+      type: mongoose.Schema.Types.ObjectId,
+      auto: true   
+    },
     date: {
       type: Date,
       required: true,
@@ -77,6 +85,12 @@ const distributorOrderSchema = new mongoose.Schema({
     companyRemarks: {
       type: String
     },
+    ARN: {
+      type: String
+    },
+    courier: {
+      type: String
+    }
   }
 ],
   gst: {

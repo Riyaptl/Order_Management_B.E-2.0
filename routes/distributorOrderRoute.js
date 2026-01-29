@@ -4,7 +4,8 @@ const {
   updateDistributorOrder,
   readDistributorOrders,
   deleteDistributorOrder,
-  deliveredDistributorOrder
+  deliveredDistributorOrder,
+  updateDeliveryDetails
 } = require("../controllers/distributorOrderController");
 
 const authenticateUser = require("../middlewares/JwtAuth");
@@ -16,6 +17,7 @@ const router = express.Router();
 router.post("/orders/read", authenticateUser, readDistributorOrders);
 router.post("/", authenticateUser, createDistributorOrder);
 router.post("/status", authenticateUser, updateDistributorOrder);
+router.post("/update", authenticateUser, checkRole("admin"), updateDeliveryDetails);
 // router.post("/deliever/:id", authenticateUser, deliveredDistributorOrder);
 router.post("/delete/:id", authenticateUser, checkRole("admin"), deleteDistributorOrder);
 

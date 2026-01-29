@@ -72,7 +72,7 @@ const loginAuth = async (req, res) => {
 
 
 const sendOTP = async (req, res) => {
-  const { username, email, password, confirmPassword, role } = req.body;
+  const { username, email, password, confirmPassword, role, address, contact } = req.body;
   const usernameTrimmed = username.trim()
   const roleTrimmed = role.trim()
   const emailTrimmed = email.trim()
@@ -105,6 +105,8 @@ const sendOTP = async (req, res) => {
       passwordHash: hashedPassword,
       otpHash: hashedOTP,
       otpGeneratedAt: new Date(),
+      address,
+      contact
     });
 
     await pending.save();
@@ -142,6 +144,8 @@ const verifyOTP = async (req, res) => {
       email: pending.email,
       role: pending.role,
       password: pending.passwordHash,
+      address: pending.address,
+      contact: pending.contact,
     });
 
     await user.save();
