@@ -26,6 +26,10 @@ const createDistributorOrder = async (req, res) => {
       return res.status(400).json({ message: "Products are required" });
     }
 
+    if (distributor === "other" && (!address || !contact)){
+      return res.status(400).json({ message: "Address and Contact details are required" });
+    }
+
     // get address if not passed from distributor
     if ((!address || !contact) && distributor !== "other"){
       const dist = await User.findOne({username: distributor})
