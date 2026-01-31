@@ -17,6 +17,12 @@ const createDistributorOrder = async (req, res) => {
       contact
     } = req.body;
 
+    if (req.user.role === "distributor"){
+      distributor = req.user.username
+      placedBy = req.user.username
+      orderPlacedBy = req.user.username
+    }
+
     // Basic required validation
     if (!distributor) {
       return res.status(400).json({ message: "Distributor is required" });
@@ -319,8 +325,12 @@ const readDistributorOrders = async (req, res) => {
     }
 
     // if not admin, self orders only
-    if (req.user.role !== "admin") {
+    if (req.user.role !== "admin" && req.user.role !== "distributor") {
       query.placedBy = req.user.username;
+    }
+
+    if (req.user.role === "distributor"){
+      query.distributor = req.user.username;
     }
 
     const orders = await DistributorOrder
