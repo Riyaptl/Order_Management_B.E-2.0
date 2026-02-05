@@ -2,7 +2,7 @@ const DistributorOrder = require("../models/DistributorOrder")
 const User = require("../models/User")
 const { Parser } = require("json2csv");
 
-//  Create order
+// Create order
 const createDistributorOrder = async (req, res) => {
   try {
     let {
@@ -17,7 +17,7 @@ const createDistributorOrder = async (req, res) => {
       contact
     } = req.body;
 
-    if (req.user.role === "distributor"){
+    if (req.user.role === "distributor") {
       distributor = req.user.username
       placedBy = req.user.username
       orderPlacedBy = req.user.username
@@ -32,17 +32,17 @@ const createDistributorOrder = async (req, res) => {
       return res.status(400).json({ message: "Products are required" });
     }
 
-    if (distributor === "other" && (!address || !contact)){
+    if (distributor === "other" && (!address || !contact)) {
       return res.status(400).json({ message: "Address and Contact details are required" });
     }
 
     // get address if not passed from distributor
-    if ((!address || !contact) && distributor !== "other"){
-      const dist = await User.findOne({username: distributor})
-      if (!address){
+    if ((!address || !contact) && distributor !== "other") {
+      const dist = await User.findOne({ username: distributor })
+      if (!address) {
         address = dist.address
       }
-      if (!contact){
+      if (!contact) {
         contact = dist.contact
       }
     }
@@ -120,7 +120,7 @@ const createDistributorOrder = async (req, res) => {
   }
 };
 
-// update status (multiple orders)
+// Update status (multiple orders)
 const updateDistributorOrder = async (req, res) => {
   try {
     const {
@@ -149,7 +149,7 @@ const updateDistributorOrder = async (req, res) => {
       _id: { $in: ids },
       deleted: false
     });
-    
+
     if (orders.length === 0) {
       return res.status(404).json({ message: "No distributor orders found" });
     }
@@ -203,6 +203,7 @@ const updateDistributorOrder = async (req, res) => {
       order.statusUpdatedBy = req.user.username;
       order.statusUpdatedAt = new Date();
       order.companyRemarks = companyRemarks || order.companyRemarks;
+      order.dispatchedAt = Date.now()
 
       if (canceledReason) {
         order.canceledReason = canceledReason;
@@ -212,7 +213,7 @@ const updateDistributorOrder = async (req, res) => {
         order.ETD.push(new Date(ETD));
       }
 
-      if (status === "delivered"){
+      if (status === "delivered") {
         order.delivered_on = Date.now()
       }
 
@@ -229,9 +230,10 @@ const updateDistributorOrder = async (req, res) => {
   }
 };
 
+// Not in use
 const updateDeliveryDetails = async (req, res) => {
   try {
-    const { id, orderId, ARN, billAttached=false, courier } = req.body;
+    const { id, orderId, ARN, billAttached = false, courier } = req.body;
 
     if (!id || !orderId || !ARN || !courier) {
       return res.status(400).json({
@@ -273,8 +275,7 @@ const updateDeliveryDetails = async (req, res) => {
   }
 };
 
-
-//  update status
+// Update status
 const deliveredDistributorOrder = async (req, res) => {
   try {
     const { id } = req.params;
@@ -305,10 +306,10 @@ const deliveredDistributorOrder = async (req, res) => {
   }
 };
 
-// read orders
+// Read orders
 const readDistributorOrders = async (req, res) => {
   try {
-    const { distributor, placedBy } = req.body;
+    const { distributor, placedBy, dispatchedAt } = req.body;
 
     // Base filter
     const query = {
@@ -324,12 +325,25 @@ const readDistributorOrders = async (req, res) => {
       query.placedBy = placedBy;
     }
 
+    if (dispatchedAt) {
+      const start = new Date(dispatchedAt);
+      start.setHours(0, 0, 0, 0);
+
+      const end = new Date(dispatchedAt);
+      end.setHours(23, 59, 59, 999);
+
+      query.dispatchedAt = {
+        $gte: start,
+        $lte: end
+      };
+    }
+
     // if not admin, self orders only
     if (req.user.role !== "admin" && req.user.role !== "distributor") {
       query.placedBy = req.user.username;
     }
 
-    if (req.user.role === "distributor"){
+    if (req.user.role === "distributor") {
       query.distributor = req.user.username;
     }
 
@@ -349,8 +363,7 @@ const readDistributorOrders = async (req, res) => {
   }
 };
 
-
-// delete order
+// Delete order
 const deleteDistributorOrder = async (req, res) => {
   try {
     const { id } = req.params;
@@ -381,8 +394,6 @@ const deleteDistributorOrder = async (req, res) => {
     res.status(500).json(error.message);
   }
 };
-
-
 
 
 module.exports = {

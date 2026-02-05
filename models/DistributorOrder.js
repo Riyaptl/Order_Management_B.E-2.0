@@ -120,6 +120,9 @@ const distributorOrderSchema = new mongoose.Schema({
     enum: ["pending", "preparing", "dispatched", "delivered",  "canceled"],
     default: "pending"
   },
+  dispatchedAt: {
+    type: Date
+  },
   expected_delivery: [{
     type: Date
   }],
