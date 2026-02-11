@@ -1,6 +1,8 @@
 const User = require("../models/User");
 const bcrypt = require("bcrypt")
 const validator = require("validator");
+const Area = require("../models/Area");
+const crypto = require("crypto");
 
 const isValidEmail = (email) => {
   return validator.isEmail(email);
@@ -139,15 +141,17 @@ const createDist = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    const firmName = name
+    const partyName = username
     await User.create({
-      username,
+      username: firmName,
       email,
       gst,
       password: hashedPassword,
       city,
       address,
       contact,
-      name,
+      name: partyName,
       role: "distributor",
       createdBy: req.user.username
     });
@@ -192,7 +196,6 @@ const editDists = async (req, res) => {
     
     let {
       name,
-      username,
       confirmPass,
       password,
       email,
@@ -200,23 +203,10 @@ const editDists = async (req, res) => {
       city,
       address,
       contact,
-
-    } = req.body;
+    } = req.body; 
 
     const updateFields = {};
-
-    username = username.trim();
-    email = email.trim();
-    gst = gst.trim();
-    password = password.trim();
-    confirmPass = confirmPass.trim();
-    city = city.trim();
-    address = address.trim();
-    name = name.trim();
-    contact = contact.trim();
-
     
-    if (username) updateFields.username = username.trim();
     if (email) updateFields.email = email.trim();
     if (gst) updateFields.gst = gst.trim();
     if (password) updateFields.password = password.trim();
@@ -256,7 +246,7 @@ const editDists = async (req, res) => {
   }
 };
 
-// set distributor active / inactive
+// activate / deactivate distributor
 const statusDists = async (req, res) => {
   try {
     const { id } = req.params;
@@ -265,26 +255,39 @@ const statusDists = async (req, res) => {
     // validate boolean
     if (typeof active !== "boolean") {
       return res.status(400).json({
-        message: "`active` must be true or false"
+        message: "`active` must be true or false",
       });
     }
 
-    const distributor = await User.findOneAndUpdate(
-      {
-        _id: id,
-        role: "distributor",
-      },
-      {
-        $set: { active }
-      },
-      { new: true }
-    );
+    // find distributor first
+    const distributor = await User.findOne({
+      _id: id,
+      role: "distributor",
+    });
 
     if (!distributor) {
       return res.status(404).json({
-        message: "Distributor not found"
+        message: "Distributor not found",
       });
     }
+
+    // 🔴 IF DEACTIVATING
+    if (active === false) {
+      await Area.updateMany(
+        { distributor: distributor.username },
+        { $set: { distributor: "" } }
+      );
+
+      // 2️⃣ Set random hashed password
+      const randomPassword = crypto.randomBytes(32).toString("hex");
+      const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+      distributor.password = hashedPassword;
+    }
+
+    // 3️⃣ Update active status
+    distributor.active = active;
+    await distributor.save();
 
     res.status(200).json({
       message: `Distributor ${active ? "activated" : "deactivated"} successfully`,
@@ -292,10 +295,11 @@ const statusDists = async (req, res) => {
 
   } catch (error) {
     console.error("Set Distributor Active Error:", error);
-    res.status(500).json(error.message);
+    res.status(500).json({
+      message: "Internal server error",
+    });
   }
 };
-
 
 
 module.exports = {

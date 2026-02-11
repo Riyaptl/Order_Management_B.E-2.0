@@ -405,5 +405,5 @@ module.exports = {
   readDistributorOrders,
   deleteDistributorOrder,
   deliveredDistributorOrder,
-  updateDeliveryDetails
+  updateDeliveryDetails,
 };

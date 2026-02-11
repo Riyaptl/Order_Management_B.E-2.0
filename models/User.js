@@ -55,7 +55,67 @@ const UserSchema = new Schema({
     },
     createdBy: {
         type: String
-    }
+    },
+    invoices: [{
+         _id: {
+              type: mongoose.Schema.Types.ObjectId,
+              auto: true   
+            },
+        vouchNo: {
+            type: String,
+            required: true
+        },
+        billingDate: {
+            type: Date,
+            required: true
+        },
+        orderDate: {
+            type: Date,
+            required: true
+        },
+        orderTotal: {
+            type: String,
+            required: true
+        },
+        dueDate: {
+            type: Date,
+            required: true
+        },
+        untaxedAmount: {
+            type: String,
+            required: true
+        },
+        totalAmount: {
+            type: String,
+            required: true
+        },
+        status: {
+            type: String,
+            enum: ["paid", "posted", "due", "partially paid"],
+            default: "posted"
+        },
+        amountPaid: {
+            type: String
+        },
+        paidOn: {
+            type: Date
+        },
+        cn: {
+            type: String
+        },
+        createdBy: {
+            type: String
+        },
+        createdAt: {
+            type: Date
+        },
+        updatedBy: {
+            type: String
+        },
+        updatedAt: {
+            type: Date
+        }
+    }]
 }, {timestamps: true});
 
 UserSchema.statics.login = async function({username, password}){
