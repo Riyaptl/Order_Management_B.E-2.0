@@ -1,8 +1,20 @@
 const express = require("express");
 const router = express.Router();
-const { getSRDetails, getAllSRs, getAllDists, assignTarget } = require("../controllers/userController");
+const { getSRDetails, getAllSRs, getAllDists, assignTarget, createDist, getDists, editDists, statusDists } = require("../controllers/userController");
 const authenticateUser = require("../middlewares/JwtAuth");
 const authorizeRoles = require("../middlewares/RoleAuth");
+
+// create distributor
+router.post("/dist", authenticateUser, authorizeRoles("admin"), createDist);
+
+// read distributors
+router.post("/dist/read", authenticateUser, authorizeRoles("admin", "tl"), getDists);
+
+// update distributors
+router.post("/dist/edit/:id", authenticateUser, authorizeRoles("admin"), editDists);
+
+// activate / inactivate distributor
+router.post("/dist/status/:id", authenticateUser, authorizeRoles("admin"), statusDists);
 
 // Only admin should access this
 router.post("/srDetails", authenticateUser, authorizeRoles("admin", "tl"), getSRDetails);

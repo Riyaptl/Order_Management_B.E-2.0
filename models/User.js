@@ -26,6 +26,15 @@ const UserSchema = new Schema({
     address: {
         type: String
     },
+    name: {
+        type: String
+    },
+    city: {
+        type: String
+    },
+    gst: {
+        type: String
+    },
     contact: {
         type: String
     },
@@ -43,6 +52,9 @@ const UserSchema = new Schema({
     active:{
         type: Boolean,
         default: true
+    },
+    createdBy: {
+        type: String
     }
 }, {timestamps: true});
 

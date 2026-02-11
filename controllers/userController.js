@@ -1,4 +1,11 @@
 const User = require("../models/User");
+const bcrypt = require("bcrypt")
+const validator = require("validator");
+
+const isValidEmail = (email) => {
+  return validator.isEmail(email);
+};
+
 
 const getSRDetails = async (req, res) => {
   try {
@@ -72,10 +79,232 @@ const assignTarget = async (req, res) => {
   }
 }
 
+// create distributor
+const createDist = async (req, res) => {
+  try {
+    let {
+      username,
+      email,
+      gst,
+      password,
+      confirmPass,
+      city,
+      address,
+      contact,
+      name
+    } = req.body;
+
+    if (
+      !username ||
+      !email ||
+      !password ||
+      !confirmPass ||
+      !city ||
+      !address ||
+      !contact ||
+      !name
+    ) {
+      return res.status(400).json({
+        message: "All fields are compulsory"
+      });
+    }
+
+    if (!isValidEmail(req.body.email)) {
+  return res.status(400).json({ message: "Invalid email address" });
+}
+
+    username = username.trim();
+    email = email.trim();
+    if (gst) gst = gst.trim();
+    password = password.trim();
+    confirmPass = confirmPass.trim();
+    city = city.trim();
+    address = address.trim();
+    name = name.trim();
+    contact = contact.trim();
+
+    if (password !== confirmPass) {
+      return res.status(400).json({
+        message: "Passwords do not match"
+      });
+    }
+
+    const existingUser = await User.findOne({ username });
+    if (existingUser) {
+      return res.status(409).json({
+        message: "Username already exists"
+      });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    await User.create({
+      username,
+      email,
+      gst,
+      password: hashedPassword,
+      city,
+      address,
+      contact,
+      name,
+      role: "distributor",
+      createdBy: req.user.username
+    });
+
+    return res.status(201).json({
+      message: "Distributor created successfully",
+    });
+
+  } catch (error) {
+    console.error("Create Distributor Error:", error);
+    res.status(500).json(error.message);
+  }
+};
+
+// Read distributors
+const getDists = async (req, res) => {
+  try {
+    const {active, city} = req.body
+
+    let query = { role: "distributor"}
+
+    if (city){
+      query.city = city
+    } 
+    if(active) {
+      query.active = active
+    } 
+
+    const dists = await User.find(query).sort({createdAt: -1})
+
+    res.status(200).json(dists);
+  } catch (error) {
+    res.status(500).json(error.message);
+  }
+};
+
+
+// edit distributor
+const editDists = async (req, res) => {
+  try {
+    const { id } = req.params;    
+    
+    let {
+      name,
+      username,
+      confirmPass,
+      password,
+      email,
+      gst,
+      city,
+      address,
+      contact,
+
+    } = req.body;
+
+    const updateFields = {};
+
+    username = username.trim();
+    email = email.trim();
+    gst = gst.trim();
+    password = password.trim();
+    confirmPass = confirmPass.trim();
+    city = city.trim();
+    address = address.trim();
+    name = name.trim();
+    contact = contact.trim();
+
+    
+    if (username) updateFields.username = username.trim();
+    if (email) updateFields.email = email.trim();
+    if (gst) updateFields.gst = gst.trim();
+    if (password) updateFields.password = password.trim();
+    if (confirmPass) updateFields.confirmPass = confirmPass.trim();
+    if (city) updateFields.city = city.trim();
+    if (address) updateFields.address = address.trim();
+    if (contact) updateFields.contact = contact.trim();
+    if (name) updateFields.name = name.trim();
+
+    if (password && password.trim().length > 0) {
+      const salt = await bcrypt.genSalt(10);
+      updateFields.password = await bcrypt.hash(password.trim(), salt);
+    }
+    
+    const updatedDistributor = await User.findOneAndUpdate(
+      {
+        _id: id,
+        role: "distributor",
+      },
+      { $set: updateFields },
+      { new: true }
+    );
+
+    if (!updatedDistributor) {
+      return res.status(404).json({
+        message: "Distributor not found"
+      });
+    }
+
+    res.status(200).json({
+      message: "Distributor updated successfully",
+    });
+
+  } catch (error) {
+    console.error("Edit Distributor Error:", error);
+    res.status(500).json(error.message);
+  }
+};
+
+// set distributor active / inactive
+const statusDists = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { active } = req.body;
+
+    // validate boolean
+    if (typeof active !== "boolean") {
+      return res.status(400).json({
+        message: "`active` must be true or false"
+      });
+    }
+
+    const distributor = await User.findOneAndUpdate(
+      {
+        _id: id,
+        role: "distributor",
+      },
+      {
+        $set: { active }
+      },
+      { new: true }
+    );
+
+    if (!distributor) {
+      return res.status(404).json({
+        message: "Distributor not found"
+      });
+    }
+
+    res.status(200).json({
+      message: `Distributor ${active ? "activated" : "deactivated"} successfully`,
+    });
+
+  } catch (error) {
+    console.error("Set Distributor Active Error:", error);
+    res.status(500).json(error.message);
+  }
+};
+
+
 
 module.exports = {
   getSRDetails,
   getAllSRs,
   getAllDists,
-  assignTarget
+  assignTarget,
+  createDist,
+  getDists,
+  editDists,
+  statusDists
 };

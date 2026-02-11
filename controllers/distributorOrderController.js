@@ -203,7 +203,9 @@ const updateDistributorOrder = async (req, res) => {
       order.statusUpdatedBy = req.user.username;
       order.statusUpdatedAt = new Date();
       order.companyRemarks = companyRemarks || order.companyRemarks;
-      order.dispatchedAt = Date.now()
+      if (order.status === "dispatched"){
+        order.dispatchedAt = Date.now()
+      }
 
       if (canceledReason) {
         order.canceledReason = canceledReason;
@@ -351,6 +353,7 @@ const readDistributorOrders = async (req, res) => {
       .find(query)
       .sort({ createdAt: -1 });
 
+    
     return res.status(200).json({
       count: orders.length,
       message: "Orders received successfully",
