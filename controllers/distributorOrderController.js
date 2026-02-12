@@ -141,15 +141,11 @@ const updateDistributorOrder = async (req, res) => {
       return res.status(400).json({ message: "Status is required" });
     }
 
-    if (status === "dispatched" && !ETD) {
-      return res.status(400).json({ message: "ETD is required for dispatch" });
-    }
-
     const orders = await DistributorOrder.find({
       _id: { $in: ids },
       deleted: false
     });
-
+    
     if (orders.length === 0) {
       return res.status(404).json({ message: "No distributor orders found" });
     }
@@ -170,14 +166,23 @@ const updateDistributorOrder = async (req, res) => {
 
     for (const order of orders) {
 
-      if (status === "delivered" && order.status !== "dispatched") {
+      if (
+        (status === "dispatched" || status === "partially dispatched") &&
+        (!order.ETD || !Array.isArray(order.ETD) || (order.ETD.length === 0 && !ETD))
+      ) {
+        return res.status(400).json({
+          message: "ETD is required for dispatch",
+        });
+      }
+
+      if (status === "delivered" && (order.status !== "dispatched" || order.status !== "partially dispatched")) {
         return res.status(400).json({
           message: `Order ${order._id} must be dispatched before delivery`
         });
       }
 
       /* ---------- Delivered products & totals ---------- */
-      if (status === "dispatched" && delivered_products) {
+      if ((status === "dispatched" || status === "partially dispatched") && delivered_products) {
         const delivered_total = {};
         Object.keys(totalMapping).forEach(c => delivered_total[c] = 0);
 
@@ -203,8 +208,11 @@ const updateDistributorOrder = async (req, res) => {
       order.statusUpdatedBy = req.user.username;
       order.statusUpdatedAt = new Date();
       order.companyRemarks = companyRemarks || order.companyRemarks;
-      if (order.status === "dispatched"){
-        order.dispatchedAt = Date.now()
+      if (order.status === "dispatched" || order.status === "partially dispatched") {
+        if (!order.dispatchedAt) {
+          order.dispatchedAt = []
+        }
+        order.dispatchedAt.push(Date.now())
       }
 
       if (canceledReason) {
@@ -216,7 +224,10 @@ const updateDistributorOrder = async (req, res) => {
       }
 
       if (status === "delivered") {
-        order.delivered_on = Date.now()
+        if (!order.delivered_on) {
+          order.delivered_on = []
+        }
+        order.delivered_on.push(Date.now())
       }
 
       await order.save();
@@ -232,7 +243,7 @@ const updateDistributorOrder = async (req, res) => {
   }
 };
 
-// Not in use
+// Update delivery details
 const updateDeliveryDetails = async (req, res) => {
   try {
     const { id, orderId, ARN, billAttached = false, courier } = req.body;
@@ -277,7 +288,7 @@ const updateDeliveryDetails = async (req, res) => {
   }
 };
 
-// Update status
+// Not in use
 const deliveredDistributorOrder = async (req, res) => {
   try {
     const { id } = req.params;
@@ -335,10 +346,13 @@ const readDistributorOrders = async (req, res) => {
       end.setHours(23, 59, 59, 999);
 
       query.dispatchedAt = {
-        $gte: start,
-        $lte: end
+        $elemMatch: {
+          $gte: start,
+          $lte: end,
+        },
       };
     }
+
 
     // if not admin, self orders only
     if (req.user.role !== "admin" && req.user.role !== "distributor") {
@@ -353,7 +367,7 @@ const readDistributorOrders = async (req, res) => {
       .find(query)
       .sort({ createdAt: -1 });
 
-    
+
     return res.status(200).json({
       count: orders.length,
       message: "Orders received successfully",

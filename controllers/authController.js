@@ -21,6 +21,7 @@ const loginAuth = async (req, res) => {
     try {
         const usernameTrimmed = username.trim();
         const user = await User.login({ username: usernameTrimmed, password });
+       
         const token = generateToken(user);
         // const isLoggedIn = user.active
 
@@ -66,6 +67,8 @@ const loginAuth = async (req, res) => {
         });
 
     } catch (error) {
+      console.log(error);
+      
         res.status(400).json(error.message);
     }
 };

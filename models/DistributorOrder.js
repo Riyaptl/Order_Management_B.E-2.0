@@ -117,12 +117,12 @@ const distributorOrderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ["pending", "preparing", "dispatched", "delivered",  "canceled"],
+    enum: ["pending", "preparing", "dispatched", "delivered",  "canceled", "partially dispatched"],
     default: "pending"
   },
-  dispatchedAt: {
+  dispatchedAt: [{
     type: Date
-  },
+  }],
   expected_delivery: [{
     type: Date
   }],
