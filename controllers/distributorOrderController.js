@@ -175,7 +175,7 @@ const updateDistributorOrder = async (req, res) => {
         });
       }
 
-      if (status === "delivered" && (order.status !== "dispatched" || order.status !== "partially dispatched")) {
+      if (status === "delivered" && (order.status !== "dispatched" && order.status !== "partially dispatched")) {     
         return res.status(400).json({
           message: `Order ${order._id} must be dispatched before delivery`
         });
@@ -207,7 +207,7 @@ const updateDistributorOrder = async (req, res) => {
       order.status = status;
       order.statusUpdatedBy = req.user.username;
       order.statusUpdatedAt = new Date();
-      order.companyRemarks = companyRemarks || order.companyRemarks;
+      order.companyRemarks = companyRemarks || order.companyRemarks || "";
       if (order.status === "dispatched" || order.status === "partially dispatched") {
         if (!order.dispatchedAt) {
           order.dispatchedAt = []
