@@ -1,12 +1,7 @@
 const User = require("../models/User");
 const bcrypt = require("bcrypt")
-const validator = require("validator");
 const Area = require("../models/Area");
 const crypto = require("crypto");
-
-const isValidEmail = (email) => {
-  return validator.isEmail(email);
-};
 
 
 const getSRDetails = async (req, res) => {
@@ -110,10 +105,6 @@ const createDist = async (req, res) => {
         message: "All fields are compulsory"
       });
     }
-
-    if (!isValidEmail(req.body.email)) {
-  return res.status(400).json({ message: "Invalid email address" });
-}
 
     username = username.trim();
     email = email.trim();
