@@ -1,15 +1,18 @@
 const express = require("express")
 const router = express.Router()
-const { loginAuth, sendOTP, verifyOTP, forgotPassword, resetPassword } = require("../controllers/authController")
+const { loginAuth, sendOTP, verifyOTP, forgotPassword, resetPassword, signup } = require("../controllers/authController")
 
-// Sign up - OTP send
+// OTP send
 router.post('/sendOTP', sendOTP)
 
-// Sign up - OTP verify
+// OTP verify
 router.post('/verifyOTP', verifyOTP)
 
 // Login
 router.post('/login', loginAuth)
+
+// Sign up
+router.post('/signup', signup)
 
 // Forgot password
 router.post('/forgotPass', forgotPassword)

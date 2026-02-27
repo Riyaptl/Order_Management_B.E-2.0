@@ -73,6 +73,74 @@ const loginAuth = async (req, res) => {
     }
 };
 
+// Sign up
+const signup = async (req, res) => {
+  try {
+    const {
+      username,
+      email,
+      password,
+      confirmPassword,
+      role,
+      address,
+      contact,
+    } = req.body;
+
+    const usernameTrimmed = username.trim();
+    const emailTrimmed = email.trim();
+    const roleTrimmed = role.trim();
+
+    // ✅ Password match check
+    if (password !== confirmPassword) {
+      return res.status(400).json("Passwords do not match");
+    }
+
+    // ✅ Email uniqueness
+    const existingUserByEmail = await User.findOne({ email: emailTrimmed });
+    if (existingUserByEmail) {
+      return res.status(400).json("User already exists");
+    }
+
+    // ✅ Username uniqueness
+    const existingUserByUsername = await User.findOne({
+      username: usernameTrimmed,
+    });
+    if (existingUserByUsername) {
+      return res.status(400).json("Username already exists");
+    }
+
+    // ✅ Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // ✅ Create user directly
+    const user = new User({
+      username: usernameTrimmed,
+      email: emailTrimmed,
+      role: roleTrimmed,
+      password: hashedPassword,
+      address,
+      contact,
+    });
+
+    await user.save();
+
+    // ✅ Generate token
+    const token = generateToken(user);
+
+    res.status(201).json({
+      message: "Sign up successful",
+      token,
+      user: user.username,
+      role: user.role,
+    });
+
+  } catch (error) {
+    console.error("Signup Error:", error);
+    res.status(500).json(error.message);
+  }
+};
+
 
 const sendOTP = async (req, res) => {
   const { username, email, password, confirmPassword, role, address, contact } = req.body;
@@ -279,4 +347,4 @@ const resetPassword = async (req, res) => {
 //     }
 // };
 
-module.exports = {loginAuth, sendOTP, verifyOTP, forgotPassword, resetPassword}
+module.exports = {loginAuth, sendOTP, verifyOTP, forgotPassword, resetPassword, signup}
