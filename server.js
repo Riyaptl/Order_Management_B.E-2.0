@@ -14,6 +14,7 @@ const distributorOrderRoute = require('./routes/distributorOrderRoute')
 const userRoute = require('./routes/userRoute')
 const attendanceRoute = require('./routes/attendanceRoute')
 const inventoryRoute = require('./routes/inventoryRoute')
+const announcementRoute = require('./routes/announcementRoute')
 const cors = require('cors');
 
 
@@ -71,4 +72,5 @@ app.use("/api/distributorOrder", distributorOrderRoute)
 app.use("/api/user", userRoute)
 app.use("/api/attendance", attendanceRoute)
 app.use("/api/inventory", inventoryRoute)
+app.use("/api/announcement", announcementRoute)
 
