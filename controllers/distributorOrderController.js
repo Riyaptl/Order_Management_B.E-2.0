@@ -413,6 +413,62 @@ const deleteDistributorOrder = async (req, res) => {
 };
 
 
+const productList = [
+  "Cranberry 50g", "Dryfruits 50g", "Peanuts 50g", "Mix seeds 50g", "Blueberry 50g", "Hazelnut 50g",
+  "Classic Coffee 50g", "Dark Coffee 50g", "Intense Coffee 50g", "Toxic Coffee 50g",
+  "Cranberry 25g", "Dryfruits 25g", "Peanuts 25g", "Mix seeds 25g", "Blueberry 25g", "Hazelnut 25g",
+  "Orange 25g", "Mint 25g", "Classic Coffee 25g", "Dark Coffee 25g",
+  "Intense Coffee 25g", "Toxic Coffee 25g", "Gift box",
+  "Hazelnut & Blueberries 55g", "Roasted Almonds & Pink Salt 55g",
+  "Kiwi & Pineapple 55g", "Ginger & Cinnamon 55g",
+  "Pistachio & Black Raisin 55g", "Dates & Raisin 55g"
+];
+
+const getAvgQuantityPerFlavour = async (req, res) => {
+  try {
+    const orders = await DistributorOrder.find({
+      deleted: false,
+      status: { $ne: "canceled" }
+    }).lean();
+
+    const result = {};
+
+    productList.forEach((flavour) => {
+      let totalQty = 0;
+      let orderCount = 0;
+
+      orders.forEach((order) => {
+        if (!order.products) return;
+
+        const qty =
+          order.products instanceof Map
+            ? order.products.get(flavour)
+            : order.products[flavour];
+
+        if (typeof qty === "number" && qty > 0) {
+          totalQty += qty;
+          orderCount += 1;
+        }
+      });
+
+      result[flavour] =
+        orderCount > 0 ? Number((totalQty / orderCount).toFixed(2)) : 0;
+    });
+
+    res.status(200).json({
+      success: true,
+      totalOrders: orders.length,
+      data: result
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+
 module.exports = {
   createDistributorOrder,
   updateDistributorOrder,
@@ -420,4 +476,5 @@ module.exports = {
   deleteDistributorOrder,
   deliveredDistributorOrder,
   updateDeliveryDetails,
+  getAvgQuantityPerFlavour
 };

@@ -832,7 +832,7 @@ const getReport = async (orders) => {
       "Hazelnut & Blueberries 55g", "Roasted Almonds & Pink Salt 55g", "Kiwi & Pineapple 55g", "Ginger & Cinnamon 55g", "Pistachio & Black Raisin 55g", "Dates & Raisin 55g"
     ];
 
-    const amountTotal = [80, 90, 45, 45, 350, 310, 285, 310, 270, 300, 350]; // PRICE, MRP
+    const amountTotal = [90, 90, 45, 45, 350, 310, 285, 310, 270, 300, 350]; // PRICE, MRP
     const productTotals = {};
     const overallTotals = {};
 
@@ -843,7 +843,7 @@ const getReport = async (orders) => {
     for (const order of orders) {
       const orderProducts = order.products || {};
       const orderTotal = order.total || {};
-      const rate = order.rate || { "25g": 28, "50g": 40, "55g": 40, "gift": 40 };
+      const rate = order.rate || { "25g": 30, "50g": 40, "55g": 40, "gift": 40 };
       const gst = 1 + parseFloat(order.gst) / 100
 
       keysToReport.forEach(key => {
@@ -903,7 +903,7 @@ const getReturnReport = async (orders) => {
       "Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g", "Gift box", "Hazelnut & Blueberries 55g", "Roasted Almonds & Pink Salt 55g", "Kiwi & Pineapple 55g", "Ginger & Cinnamon 55g", "Pistachio & Black Raisin 55g", "Dates & Raisin 55g"
     ];
 
-    const amountTotal = [80, 90, 45, 45, 350, 310, 285, 310, 270, 300, 350]; // PRICE, MRP
+    const amountTotal = [90, 90, 45, 45, 350, 310, 285, 310, 270, 300, 350]; // PRICE, MRP
     const productTotals = {};
     const overallTotals = {};
 
@@ -914,7 +914,7 @@ const getReturnReport = async (orders) => {
     for (const order of orders) {
       let orderProducts = {};
       let orderTotal = {};
-      const rate = order.rate || { "25g": 0, "50g": 0, "55g": 0, "gift": 0 };
+      const rate = order.rate || { "25g": 30, "50g": 40, "55g": 40, "gift": 40 };
       const gst = 1 + parseFloat(order.gst) / 100
 
       if (order.type === "return") {

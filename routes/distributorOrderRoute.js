@@ -5,7 +5,8 @@ const {
   readDistributorOrders,
   deleteDistributorOrder,
   deliveredDistributorOrder,
-  updateDeliveryDetails
+  updateDeliveryDetails,
+  getAvgQuantityPerFlavour
 } = require("../controllers/distributorOrderController");
 
 const authenticateUser = require("../middlewares/JwtAuth");
@@ -32,5 +33,8 @@ router.post("/status", authenticateUser, updateDistributorOrder);
 router.post("/update", authenticateUser, checkRole("admin"), updateDeliveryDetails);
 // router.post("/deliever/:id", authenticateUser, deliveredDistributorOrder);
 router.post("/delete/:id", authenticateUser, checkRole("admin"), deleteDistributorOrder);
+
+// AVG quantity
+router.post("/avg", getAvgQuantityPerFlavour);
 
 module.exports = router;
