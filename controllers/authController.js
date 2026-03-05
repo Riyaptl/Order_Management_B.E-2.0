@@ -78,7 +78,6 @@ const signup = async (req, res) => {
   try {
     const {
       username,
-      email,
       password,
       confirmPassword,
       role,
@@ -87,18 +86,12 @@ const signup = async (req, res) => {
     } = req.body;
 
     const usernameTrimmed = username.trim();
-    const emailTrimmed = email.trim();
+   
     const roleTrimmed = role.trim();
 
     // ✅ Password match check
     if (password !== confirmPassword) {
       return res.status(400).json("Passwords do not match");
-    }
-
-    // ✅ Email uniqueness
-    const existingUserByEmail = await User.findOne({ email: emailTrimmed });
-    if (existingUserByEmail) {
-      return res.status(400).json("User already exists");
     }
 
     // ✅ Username uniqueness
@@ -116,7 +109,6 @@ const signup = async (req, res) => {
     // ✅ Create user directly
     const user = new User({
       username: usernameTrimmed,
-      email: emailTrimmed,
       role: roleTrimmed,
       password: hashedPassword,
       address,
