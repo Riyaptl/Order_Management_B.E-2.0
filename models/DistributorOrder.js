@@ -155,6 +155,23 @@ const distributorOrderSchema = new mongoose.Schema({
   },
   contact: {
     type: String
+  },
+  paymentStatus: {
+    type: String,
+    enum: ["posted", "paid", "due", "informed", "pending", "partially paid"],
+    default: "pending"
+  },
+  paymentRemarks: {
+    type: String
+  },
+  paymentStatusDate: {
+    type: Date
+  },
+  invoiceNo: {
+    type: String
+  },
+  dueOn: {
+    type: String
   }
 });
 // { timestamps: true }

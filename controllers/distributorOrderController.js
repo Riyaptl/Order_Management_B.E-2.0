@@ -104,7 +104,7 @@ const createDistributorOrder = async (req, res) => {
       orderPlacedBy: orderPlacedBy,
       status: "pending",
       expected_delivery: expected_delivery || [],
-      createdAt: new Date()
+      createdAt: new Date(),
     };
 
     await DistributorOrder.create(orderData);
@@ -469,6 +469,41 @@ const getAvgQuantityPerFlavour = async (req, res) => {
   }
 };
 
+// payment status
+const updatePaymentStatus = async (req, res) => {
+  try {
+    const { id, paymentStatus, paymentRemarks, invoiceNo, dueOn } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ message: "Order ID is required" });
+    }
+
+    const updatedOrder = await DistributorOrder.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          paymentStatus,
+          paymentRemarks,
+          invoiceNo,
+          dueOn,
+          paymentStatusDate: new Date() // Sets current timestamp
+        }
+      },
+      { new: true, runValidators: true } 
+    );
+
+    if (!updatedOrder) {
+      return res.status(404).json({ message: "Distributor order not found" });
+    }
+
+    res.status(200).json({
+      message: "Payment status updated successfully",
+    });
+  } catch (error) {
+    res.status(500).json(error.message);
+  }
+};
+
 module.exports = {
   createDistributorOrder,
   updateDistributorOrder,
@@ -476,5 +511,6 @@ module.exports = {
   deleteDistributorOrder,
   deliveredDistributorOrder,
   updateDeliveryDetails,
-  getAvgQuantityPerFlavour
+  getAvgQuantityPerFlavour,
+  updatePaymentStatus
 };
