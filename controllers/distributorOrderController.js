@@ -504,6 +504,73 @@ const updatePaymentStatus = async (req, res) => {
   }
 };
 
+// CSV export
+const PDFDocument = require("pdfkit");
+
+const exportDistributorOrdersCSV = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const order = await DistributorOrder.findById(id);
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // Create PDF
+    const doc = new PDFDocument({ margin: 40 });
+
+    // Set response headers
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=order_${order.distributor}.pdf`
+    );
+
+    doc.pipe(res);
+
+    // Title
+    doc.fontSize(18).text("Distributor Order", { align: "center" });
+    doc.moveDown();
+
+    // Helper function to add rows
+    const addRow = (label, value) => {
+  doc.fontSize(12).text(`${label}: ${value}`);
+};
+
+    // Distributor
+    addRow("Distributor:", order.distributor);
+    doc.moveDown();
+
+    // Products
+    doc.fontSize(14).text("Products:");
+    doc.moveDown(0.5);
+
+    if (order.products) {
+      for (let [key, value] of order.products.entries()) {
+        addRow(key, value);
+      }
+    }
+
+    doc.moveDown();
+
+    // Totals
+    doc.fontSize(14).text("Totals:");
+    doc.moveDown(0.5);
+
+    if (order.total) {
+      for (let [key, value] of order.total.entries()) {
+        addRow(key, value);
+      }
+    }
+
+    doc.end();
+  } catch (error) {
+    res.status(500).json({ message: "Error generating PDF" });
+  }
+};
+
+
 module.exports = {
   createDistributorOrder,
   updateDistributorOrder,
@@ -512,5 +579,6 @@ module.exports = {
   deliveredDistributorOrder,
   updateDeliveryDetails,
   getAvgQuantityPerFlavour,
-  updatePaymentStatus
+  updatePaymentStatus,
+  exportDistributorOrdersCSV
 };
