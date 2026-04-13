@@ -171,7 +171,8 @@ const distributorOrderSchema = new mongoose.Schema({
     type: String
   },
   dueOn: {
-    type: String
+    type: String,
+    default: ""
   }
 });
 // { timestamps: true }

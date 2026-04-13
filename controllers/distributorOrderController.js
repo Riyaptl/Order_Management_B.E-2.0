@@ -1,6 +1,8 @@
 const DistributorOrder = require("../models/DistributorOrder")
 const User = require("../models/User")
 const { Parser } = require("json2csv");
+const PDFDocument = require("pdfkit");
+
 
 // Create order
 const createDistributorOrder = async (req, res) => {
@@ -145,7 +147,7 @@ const updateDistributorOrder = async (req, res) => {
       _id: { $in: ids },
       deleted: false
     });
-    
+
     if (orders.length === 0) {
       return res.status(404).json({ message: "No distributor orders found" });
     }
@@ -175,7 +177,7 @@ const updateDistributorOrder = async (req, res) => {
         });
       }
 
-      if (status === "delivered" && (order.status !== "dispatched" && order.status !== "partially dispatched")) {     
+      if (status === "delivered" && (order.status !== "dispatched" && order.status !== "partially dispatched")) {
         return res.status(400).json({
           message: `Order ${order._id} must be dispatched before delivery`
         });
@@ -322,7 +324,7 @@ const deliveredDistributorOrder = async (req, res) => {
 // Read orders
 const readDistributorOrders = async (req, res) => {
   try {
-    const { distributor, placedBy, dispatchedAt } = req.body;
+    const { distributor, placedBy, dispatchedAt, dueDate } = req.body;
 
     // Base filter
     const query = {
@@ -353,6 +355,31 @@ const readDistributorOrders = async (req, res) => {
       };
     }
 
+    // filter on due date and unpaid
+    if (dueDate) {
+  const passedDate = new Date(dueDate);
+
+  // normalize to end of day (VERY IMPORTANT)
+  passedDate.setHours(23, 59, 59, 999);
+
+  query.paymentStatus = { $nin: ["paid", "pending"] };
+
+  query.$expr = {
+    $and: [
+      // valid dueOn
+      { $ne: ["$dueOn", null] },
+      { $ne: ["$dueOn", ""] },
+
+      // overdue condition
+      {
+        $lt: [
+          { $toDate: "$dueOn" },
+          passedDate
+        ]
+      }
+    ]
+  };
+}
 
     // if not admin, self orders only
     if (req.user.role !== "admin" && req.user.role !== "distributor") {
@@ -489,7 +516,7 @@ const updatePaymentStatus = async (req, res) => {
           paymentStatusDate: new Date() // Sets current timestamp
         }
       },
-      { new: true, runValidators: true } 
+      { new: true, runValidators: true }
     );
 
     if (!updatedOrder) {
@@ -505,8 +532,6 @@ const updatePaymentStatus = async (req, res) => {
 };
 
 // CSV export
-const PDFDocument = require("pdfkit");
-
 const exportDistributorOrdersCSV = async (req, res) => {
   try {
     const { id } = req.params;
@@ -535,15 +560,28 @@ const exportDistributorOrdersCSV = async (req, res) => {
 
     // Helper function to add rows
     const addRow = (label, value) => {
-  doc.fontSize(12).text(`${label}: ${value}`);
-};
+      const startX = doc.x;
+      const startY = doc.y;
+
+      doc.fontSize(12).text(`${label}:     ${value}`);
+
+      // Draw line below the text
+      const lineY = doc.y + 2;
+
+      doc
+        .moveTo(startX, lineY)
+        .lineTo(550, lineY) // adjust width if needed
+        .stroke();
+
+      doc.moveDown(0.5); // spacing after line
+    };
 
     // Distributor
     addRow("Distributor:", order.distributor);
     doc.moveDown();
 
     // Products
-    doc.fontSize(14).text("Products:");
+    doc.fontSize(14).text("Products: ");
     doc.moveDown(0.5);
 
     if (order.products) {
