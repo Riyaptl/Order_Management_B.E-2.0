@@ -602,6 +602,10 @@ const exportDistributorOrdersCSV = async (req, res) => {
       }
     }
 
+    // Remarks
+    doc.moveDown();
+    addRow("Remarks:", order.remarks);
+
     doc.end();
   } catch (error) {
     res.status(500).json({ message: "Error generating PDF" });
