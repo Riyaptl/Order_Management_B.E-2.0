@@ -248,9 +248,9 @@ const updateDistributorOrder = async (req, res) => {
 // Update delivery details
 const updateDeliveryDetails = async (req, res) => {
   try {
-    const { id, orderId, ARN, billAttached = false, courier } = req.body;
+    const { id, orderId, ARN, billAttached = false, courier, boxes } = req.body;
 
-    if (!id || !orderId || !ARN || !courier) {
+    if (!id || !orderId || !ARN ) {
       return res.status(400).json({
         message: "Missing required fields"
       });
@@ -260,7 +260,8 @@ const updateDeliveryDetails = async (req, res) => {
 
     updateFields["delivered.$.ARN"] = ARN;
     updateFields["delivered.$.billAttached"] = billAttached;
-    updateFields["delivered.$.courier"] = courier;
+    updateFields["delivered.$.courier"] = courier || "";
+    updateFields["delivered.$.boxes"] = boxes || "0";
 
     const order = await DistributorOrder.findOneAndUpdate(
       {

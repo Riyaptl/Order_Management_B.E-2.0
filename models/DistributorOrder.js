@@ -90,6 +90,9 @@ const distributorOrderSchema = new mongoose.Schema({
     },
     courier: {
       type: String
+    },
+    boxes: {
+      type: String
     }
   }
 ],
