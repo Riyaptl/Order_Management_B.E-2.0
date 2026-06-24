@@ -832,7 +832,7 @@ const getReport = async (orders) => {
       "Hazelnut & Blueberries 55g", "Roasted Almonds & Pink Salt 55g", "Kiwi & Pineapple 55g", "Ginger & Cinnamon 55g", "Pistachio & Black Raisin 55g", "Dates & Raisin 55g"
     ];
 
-    const amountTotal = [90, 90, 45, 45, 350, 310, 285, 310, 270, 300, 350]; // PRICE, MRP
+    const amountTotal = [99, 99, 50, 50, 350, 310, 285, 310, 270, 300, 350]; // PRICE, MRP
     const productTotals = {};
     const overallTotals = {};
 
@@ -903,7 +903,7 @@ const getReturnReport = async (orders) => {
       "Regular 50g", "Coffee 50g", "Regular 25g", "Coffee 25g", "Gift box", "Hazelnut & Blueberries 55g", "Roasted Almonds & Pink Salt 55g", "Kiwi & Pineapple 55g", "Ginger & Cinnamon 55g", "Pistachio & Black Raisin 55g", "Dates & Raisin 55g"
     ];
 
-    const amountTotal = [90, 90, 45, 45, 350, 310, 285, 310, 270, 300, 350]; // PRICE, MRP
+    const amountTotal = [99, 99, 50, 50, 350, 310, 285, 310, 270, 300, 350]; // PRICE, MRP
     const productTotals = {};
     const overallTotals = {};
 
